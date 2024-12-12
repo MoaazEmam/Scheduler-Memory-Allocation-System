@@ -10,19 +10,19 @@ PriorityQueue* createQueue() {
 }
 
 // Enqueue an element in ascending order
-void enqueue(PriorityQueue* pq, int value) {
+void enqueue(PriorityQueue* pq, PCB *pcb,int pri) {
     Node* newNode = (Node*)malloc(sizeof(Node));
-    newNode->data = value;
+    newNode->pcb = pcb;
     newNode->next = NULL;
 
     // If the queue is empty or the new node has the highest priority (smallest value)
-    if (pq->front == NULL || pq->front->data > value) {
+    if (pq->front == NULL || pq->front->data > pri) {
         newNode->next = pq->front;
         pq->front = newNode;
     } else {
         // Find the correct position to insert the new node
         Node* current = pq->front;
-        while (current->next != NULL && current->next->data <= value) {
+        while (current->next != NULL && current->next->data <= pri) {
             current = current->next;
         }
         newNode->next = current->next;

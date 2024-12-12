@@ -1,8 +1,10 @@
+#include <headers.h>
 #ifndef PRIORITY_QUEUE_H
 #define PRIORITY_QUEUE_H
 
+
 typedef struct Node {
-    int data;
+    PCB *pcb;
     struct Node* next;
 } Node;
 
