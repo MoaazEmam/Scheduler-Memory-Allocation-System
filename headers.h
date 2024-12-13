@@ -17,6 +17,11 @@ typedef short bool;
 
 #define SHKEY 300
 
+typedef struct PCB {
+    int pri;
+    //just to simulate for pri queue func
+} PCB;
+
 ///==============================
 //don't mess with this variable//
 int *shmaddr; //
