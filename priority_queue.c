@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "priority_queue.h"
 
 // Create a new priority queue
@@ -10,19 +8,20 @@ PriorityQueue* createQueue() {
 }
 
 // Enqueue an element in ascending order
-void enqueue(PriorityQueue* pq, PCB *pcb,int pri) {
+void enqueue(PriorityQueue* pq, PCB *pcb, int pri) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     newNode->pcb = pcb;
     newNode->next = NULL;
+    newNode->priority = pri;
 
     // If the queue is empty or the new node has the highest priority (smallest value)
-    if (pq->front == NULL || pq->front->data > pri) {
+    if (pq->front == NULL || pq->front->priority > pri) {
         newNode->next = pq->front;
         pq->front = newNode;
     } else {
         // Find the correct position to insert the new node
         Node* current = pq->front;
-        while (current->next != NULL && current->next->data <= pri) {
+        while (current->next != NULL && current->next->priority <= pri) {
             current = current->next;
         }
         newNode->next = current->next;
@@ -31,27 +30,32 @@ void enqueue(PriorityQueue* pq, PCB *pcb,int pri) {
 }
 
 // Dequeue the element with the highest priority (smallest value)
-int dequeue(PriorityQueue* pq) {
+bool dequeue(PriorityQueue* pq, PCB** retpcb) {
     if (isEmpty(pq)) {
         printf("Queue is empty!\n");
-        return -1; // Indicate that the queue is empty
+        return false;
     }
     Node* temp = pq->front;
-    int value = temp->data;
+
+    // Return the pointer to the dequeued PCB
+    *retpcb = temp->pcb;
+
     pq->front = pq->front->next;
     free(temp);
-    return value;
+    return true;
 }
 
 // Check if the queue is empty
-int isEmpty(PriorityQueue* pq) {
+bool isEmpty(PriorityQueue* pq) {
     return pq->front == NULL;
 }
 
 // Free the memory allocated for the queue
 void freeQueue(PriorityQueue* pq) {
     while (!isEmpty(pq)) {
-        dequeue(pq);
+        PCB* tempPcb = NULL;
+        dequeue(pq, &tempPcb);
+        // PCB memory is not freed here because it should be managed by the caller
     }
     free(pq);
 }

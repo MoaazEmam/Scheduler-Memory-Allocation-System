@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "circular_queue.h"
 
 // Initialize the circular queue
@@ -13,13 +11,13 @@ bool isEmpty(CircularQueue* q) {
 }
 
 // Enqueue an element into the queue
-void enqueue(CircularQueue* q, int value) {
+void enqueue(CircularQueue* q, PCB* pcb) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     if (!newNode) {
         printf("Memory allocation failed\n");
         return;
     }
-    newNode->data = value;
+    newNode->pcb = pcb;
 
     if (isEmpty(q)) {
         newNode->next = newNode; // Points to itself
@@ -32,13 +30,13 @@ void enqueue(CircularQueue* q, int value) {
 }
 
 // Dequeue an element from the queue
-bool dequeue(CircularQueue* q, int* value) {
+bool dequeue(CircularQueue* q, PCB** retpcb) {
     if (isEmpty(q)) {
         return false; // Queue is empty
     }
 
     Node* temp = q->rear->next;
-    *value = temp->data;
+    *retpcb = temp->pcb;
 
     if (q->rear == temp) {
         q->rear = NULL; // Queue is now empty
@@ -60,7 +58,7 @@ void displayQueue(CircularQueue* q) {
     Node* temp = q->rear->next;
     printf("Queue elements: ");
     do {
-        printf("%d ", temp->data);
+        printf("%d ", temp->pcb->pri);
         temp = temp->next;
     } while (temp != q->rear->next);
     printf("\n");
