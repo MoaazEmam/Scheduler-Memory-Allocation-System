@@ -18,9 +18,20 @@ typedef short bool;
 #define SHKEY 300
 
 typedef struct PCB {
-    int pri;
-    //just to simulate for pri queue func
+   int id;
+   int arrival_time;
+   int runtime;
+   int priority;
+   int state;
+   int remaining_time;
+   int waiting_time;
 } PCB;
+
+typedef struct msgbuff
+{
+    long mtype;
+    PCB pcb;
+} msgbuff;
 
 ///==============================
 //don't mess with this variable//
