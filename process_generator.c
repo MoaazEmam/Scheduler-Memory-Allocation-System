@@ -10,8 +10,22 @@ int main(int argc, char *argv[])
     // 1. Read the input files.
     CircularQueue *PCBs;
     initQueue(PCBs);
-    // FILE *pFile;
-    // pFile = fopen("processes.txt", "r");
+    FILE *pFile;
+    pFile = fopen("processes.txt", "r");
+    if (pFile == NULL) {
+        printf("no such file.");
+        return 1;
+    }
+    int id,arrival,runtime,priority;
+    while (fscanf(pFile, "%d %d %d %d", &id, &arrival, &runtime, &priority) == 4) {
+        PCB* readingPcb;
+        readingPcb = malloc(sizeof(PCB));
+        readingPcb->id = id;
+        readingPcb->arrival_time = arrival;
+        readingPcb->runtime = runtime;
+        readingPcb->priority = priority;
+        enqueue(PCBs,readingPcb);
+    }
     //  2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
     /*  1. Shortest Job First (SJF)
         2. Preemptive Highest Priority First (HPF)
@@ -90,15 +104,16 @@ int main(int argc, char *argv[])
     struct msgbuff arrivedprocess;
     while (!isEmpty(PCBs))
     { // loop until processes are gone
-        PCB currentPcb;
-        dequeue(PCBs, && currentPcb);
-        while (getClk()<currentPcb.arrival_time); //wait till a process arrives
+        PCB* currentPcb;
+        dequeue(PCBs, &currentPcb);
+        while (getClk()<currentPcb->arrival_time); //wait till a process arrives
         arrivedprocess.mtype = 0;
-        arrivedprocess.pcb = currentPcb;
+        arrivedprocess.pcb = &currentPcb;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
         if (send_val == -1){
             perror("Failed to send PCB to schedular \n");
         }
+        free(currentPcb);
     }
     // 7. Clear clock resources
     destroyClk(true);

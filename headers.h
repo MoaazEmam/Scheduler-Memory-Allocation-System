@@ -18,13 +18,14 @@ typedef short bool;
 #define SHKEY 300
 
 typedef struct PCB {
-   int id;
+   int id; //read from file
    int arrival_time;
    int runtime;
    int priority;
    int state;
    int remaining_time;
    int waiting_time;
+   int pid; //forking id
 } PCB;
 
 typedef struct msgbuff
