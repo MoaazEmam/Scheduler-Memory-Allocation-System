@@ -1,6 +1,6 @@
-#include "headers.h"
 #ifndef CIRCULAR_QUEUE_H
 #define CIRCULAR_QUEUE_H
+#include "headers.h"
 
 // Node structure for the queue
 typedef struct Node {

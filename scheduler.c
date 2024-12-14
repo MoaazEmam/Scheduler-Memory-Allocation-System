@@ -3,7 +3,7 @@
 int main(int argc, char *argv[])
 {
     initClk();
-    // set message queue between process generator and schedular
+    // set up message queue between process generator and schedular
     key_t msg_id;
     int send_val;
     msg_id = ftok("msgfile", 65);

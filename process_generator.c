@@ -1,5 +1,5 @@
-#include "headers.h"
 #include "circular_queue.h"
+
 void clearResources(int);
 int msgq_id;
 
@@ -104,11 +104,11 @@ int main(int argc, char *argv[])
     struct msgbuff arrivedprocess;
     while (!isEmpty(PCBs))
     { // loop until processes are gone
-        PCB* currentPcb;
-        dequeue(PCBs, &currentPcb);
+        PCB* currentPcb = &arrivedprocess.pcb;
+        PCB** currentPcb_pointer = &currentPcb;
+        dequeue(PCBs, currentPcb_pointer);
         while (getClk()<currentPcb->arrival_time); //wait till a process arrives
         arrivedprocess.mtype = 0;
-        arrivedprocess.pcb = &currentPcb;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
         if (send_val == -1){
             perror("Failed to send PCB to schedular \n");
