@@ -3,6 +3,7 @@
 int main(int argc, char *argv[])
 {
     initClk();
+    printf("algo: %s, quan: %s \n",argv[1],argv[2]);
     // set up message queue between process generator and schedular
     key_t msg_id;
     int send_val;

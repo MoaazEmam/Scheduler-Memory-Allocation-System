@@ -6,12 +6,16 @@ int msgq_id;
 int main(int argc, char *argv[])
 {
     signal(SIGINT, clearResources);
+    if (argc < 4){
+        printf("incorrect number of arguments\n");
+        exit(1);
+    }
     // TODO Initialization
     // 1. Read the input files.
     CircularQueue* PCBs = malloc(sizeof(CircularQueue));
     initQueue(PCBs);
     FILE *pFile;
-    pFile = fopen("processes.txt", "r");
+    pFile = fopen(argv[1], "r");
     if (pFile == NULL) {
         printf("no such file.");
         return 1;
@@ -34,18 +38,15 @@ int main(int argc, char *argv[])
         2. Preemptive Highest Priority First (HPF)
         3. Round Robin (RR)
         4. Multiple level Feedback Loop*/
-    if (argc < 2){
-        printf("incorrect number of arguments\n");
-        exit(1);
-    }
-    int algo_chosen = atoi(argv[1]);
+
+    int algo_chosen = atoi(argv[3]);
     int quantum;
     //input quantum if round robin or multiple level feedback
     if (algo_chosen >= 3)
     {
-        if (argc > 2)
+        if (argc > 5)
         {
-            quantum = atoi(argv[2]);
+            quantum = atoi(argv[5]);
         }
         else
         {
@@ -63,7 +64,7 @@ int main(int argc, char *argv[])
         if (scheduler_compile == 0)
         {
             // the forked process now runs the scheduler
-            execl("./scheduler.out", "scheduler.out",argv[1],argv[2],NULL);
+            execl("./scheduler.out", "scheduler.out",argv[3],argv[5],NULL);
             printf("failed to execl");
         }
         else
