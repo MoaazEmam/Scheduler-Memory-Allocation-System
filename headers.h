@@ -28,6 +28,15 @@ typedef struct PCB {
    int pid; //forking id
 } PCB;
 
+enum STATE{
+    READY, //0
+    RUNNING, //1
+    FINISHED, //2
+    STARTED, //3
+    RESUMED, //4
+    STOPPED //5
+};
+
 typedef struct msgbuff
 {
     long mtype;

@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.pid = -1;
         arrivedprocess.pcb.remaining_time = currentPcb->runtime;
         arrivedprocess.pcb.waiting_time = 0;
-        arrivedprocess.pcb.state = 2; //momken ne3melha enum
+        arrivedprocess.pcb.state = READY; //momken ne3melha enum....3mlnaha f3lan b enum :)
         while (getClk() < currentPcb->arrival_time); //wait till a process arrives
         printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
         arrivedprocess.mtype = 1;
