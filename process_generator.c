@@ -34,12 +34,12 @@ int main(int argc, char *argv[])
         2. Preemptive Highest Priority First (HPF)
         3. Round Robin (RR)
         4. Multiple level Feedback Loop*/
-    int algo_chosen = atoi(argv[1]);
-    int quantum;
     if (argc < 2){
         printf("incorrect number of arguments\n");
         exit(1);
     }
+    int algo_chosen = atoi(argv[1]);
+    int quantum;
     //input quantum if round robin or multiple level feedback
     if (algo_chosen >= 3)
     {
@@ -59,55 +59,55 @@ int main(int argc, char *argv[])
     }
     // // 3. Initiate and create the scheduler and clock processes.
     //fork scheduler process
-    int scheduler_id = fork();
-    if (scheduler_id == 0)
-    {
-        // compile scheduler code
-        int scheduler_compile = system("gcc scheduler.c -o scheduler.out");
-        if (scheduler_compile == 0)
-        {
-            // the forked process now runs the scheduler
-            execl("./scheduler.out", "scheduler.out",algo_chosen,quantum,NULL);
-        }
-        else
-        {
-            printf("Couldn't compile scheduler.c \n");
-            exit(1);
-        }
-    }
+    // int scheduler_id = fork();
+    // if (scheduler_id == 0)
+    // {
+    //     // compile scheduler code
+    //     int scheduler_compile = system("gcc scheduler.c -o scheduler.out");
+    //     if (scheduler_compile == 0)
+    //     {
+    //         // the forked process now runs the scheduler
+    //         execl("./scheduler.out", "scheduler.out",algo_chosen,quantum,NULL);
+    //     }
+    //     else
+    //     {
+    //         printf("Couldn't compile scheduler.c \n");
+    //         exit(1);
+    //     }
+    // }
     // fork clk process
-    int clk_id = fork();
-    if (clk_id == 0)
-    {
-        //compile clk code
-        int clk_compile = system("gcc clk.c -o clk.out");
-        if (clk_compile == 0)
-        {
-            //the forked process now runs the clk
-            execl("./clk.out", "clk.out", NULL);
-        }
-        else
-        {
-            printf("Couldn't compile clk.out \n");
-            exit(1);
-        }
-    }
+    // int clk_id = fork();
+    // if (clk_id == 0)
+    // {
+    //     //compile clk code
+    //     int clk_compile = system("gcc clk.c -o clk.out");
+    //     if (clk_compile == 0)
+    //     {
+    //         //the forked process now runs the clk
+    //         execl("./clk.out", "clk.out", NULL);
+    //     }
+    //     else
+    //     {
+    //         printf("Couldn't compile clk.out \n");
+    //         exit(1);
+    //     }
+    // }
     // 4. Use this function after creating the clock process to initialize clock.
-    initClk();
+    //initClk();
     // To get time use this function.
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
     // 6. Send the information to the scheduler at the appropriate time.
     // set message queue between process generator and schedular
-    // key_t msg_id;
-    // int send_val;
-    // msg_id = ftok("msgfile", 65);
-    // msgq_id = msgget(msg_id, 0666 | IPC_CREAT);
-    // if (msgq_id == -1)
-    // {
-    //     perror("Error in create");
-    //     exit(-1);
-    // }
+    key_t msg_id;
+    int send_val;
+    msg_id = ftok("msgfile", 65);
+    msgq_id = msgget(msg_id, 0666 | IPC_CREAT);
+    if (msgq_id == -1)
+    {
+        perror("Error in create");
+        exit(-1);
+    }
     struct msgbuff arrivedprocess;
     while (!isEmpty(PCBs))
     { // loop until processes are gone
@@ -121,26 +121,27 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.remaining_time = currentPcb->runtime;
         arrivedprocess.pcb.waiting_time = 0;
         arrivedprocess.pcb.state = 2; //momken ne3melha enum
-        printf("clk: %d, arriv: %d",getClk(),currentPcb->arrival_time);
-        while (getClk() < currentPcb->arrival_time); //wait till a process arrives
-        printf("Received process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
-        arrivedprocess.mtype = 0;
-        // send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
-        // if (send_val == -1){
-        //     perror("Failed to send PCB to schedular \n");
-        // }
+        //printf("clk: %d, arriv: %d",getClk(),currentPcb->arrival_time);
+        //while (getClk() < currentPcb->arrival_time); //wait till a process arrives
+        printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
+        arrivedprocess.mtype = 1;
+        send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
+        if (send_val == -1){
+            perror("Failed to send PCB to schedular \n");
+        }
         free(currentPcb);
     }
     // 7. Clear clock resources
     //destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
+    return 0;
 }
 
 void clearResources(int signum)
 {
     // TODO Clears all resources in case of interruption
      // 7. Clear clock resources
-    destroyClk(true);
+    //destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
     raise(SIGKILL);
 

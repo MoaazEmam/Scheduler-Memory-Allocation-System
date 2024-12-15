@@ -16,9 +16,9 @@ int main(int argc, char *argv[])
     //the up coming loop is just for testing
     struct msgbuff sentPCB;
     while(1){
-        int rec_val = msgrcv(msgq_id, &sentPCB, sizeof(sentPCB.pcb), 0, !IPC_NOWAIT);
+        int rec_val = msgrcv(msgq_id, &sentPCB, sizeof(sentPCB.pcb), 1, !IPC_NOWAIT);
         if (rec_val != 1){
-            printf("Received process %d at time %d with runtime %d and priority %d \n",sentPCB.pcb.id,getClk(),sentPCB.pcb.runtime,sentPCB.pcb.priority);
+            printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n",sentPCB.pcb.id,getClk(),sentPCB.pcb.runtime,sentPCB.pcb.priority);
         }
     }
     //TODO: implement the scheduler.
