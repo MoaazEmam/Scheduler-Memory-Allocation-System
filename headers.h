@@ -22,7 +22,7 @@ typedef struct PCB {
    int arrival_time;
    int runtime;
    int priority;
-   int state;
+   int state; //1.Running 2.Ready 3.Blocked => enum lesa
    int remaining_time;
    int waiting_time;
    int pid; //forking id
