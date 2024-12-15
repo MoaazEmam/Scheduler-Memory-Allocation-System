@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
     //     }
     // }
     // 4. Use this function after creating the clock process to initialize clock.
-    //initClk();
+    initClk();
     // To get time use this function.
     // TODO Generation Main Loop
     // 5. Create a data structure for processes and provide it with its parameters.
@@ -121,8 +121,8 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.remaining_time = currentPcb->runtime;
         arrivedprocess.pcb.waiting_time = 0;
         arrivedprocess.pcb.state = 2; //momken ne3melha enum
-        //printf("clk: %d, arriv: %d",getClk(),currentPcb->arrival_time);
-        //while (getClk() < currentPcb->arrival_time); //wait till a process arrives
+        while (getClk() < currentPcb->arrival_time); //wait till a process arrives
+        printf("clk: %d, arriv: %d",getClk(),currentPcb->arrival_time);
         printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
         arrivedprocess.mtype = 1;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
         free(currentPcb);
     }
     // 7. Clear clock resources
-    //destroyClk(true);
+    destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
     return 0;
 }
@@ -141,7 +141,7 @@ void clearResources(int signum)
 {
     // TODO Clears all resources in case of interruption
      // 7. Clear clock resources
-    //destroyClk(true);
+    destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
     raise(SIGKILL);
 
