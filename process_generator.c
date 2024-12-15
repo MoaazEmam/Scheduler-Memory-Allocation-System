@@ -1,4 +1,4 @@
-#include "circular_queue.h"
+#include "headers.h"
 
 void clearResources(int);
 int msgq_id;
@@ -8,8 +8,8 @@ int main(int argc, char *argv[])
     signal(SIGINT, clearResources);
     // TODO Initialization
     // 1. Read the input files.
-    CircularQueue *PCBs;
-    initQueue(PCBs);
+    CircularQueue PCBs;
+    initQueue(&PCBs);
     FILE *pFile;
     pFile = fopen("processes.txt", "r");
     if (pFile == NULL) {
@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
         readingPcb->arrival_time = arrival;
         readingPcb->runtime = runtime;
         readingPcb->priority = priority;
-        enqueue(PCBs,readingPcb);
+        enqueue(&PCBs,readingPcb);
     }
     //  2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
     /*  1. Shortest Job First (SJF)
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
         if (scheduler_compile == 0)
         {
             // the forked process now runs the scheduler
-            execl("./scheduler.out", "scheduler.out", algo_chosen, quantum, NULL);
+            execl("./scheduler.out", "scheduler.out",algo_chosen,quantum,NULL);
         }
         else
         {
@@ -102,17 +102,18 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     struct msgbuff arrivedprocess;
-    while (!isEmpty(PCBs))
+    while (!isEmpty(&PCBs))
     { // loop until processes are gone
         PCB* currentPcb = &arrivedprocess.pcb;
         PCB** currentPcb_pointer = &currentPcb;
-        dequeue(PCBs, currentPcb_pointer);
-        while (getClk()<currentPcb->arrival_time); //wait till a process arrives
-        arrivedprocess.mtype = 0;
-        send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
-        if (send_val == -1){
-            perror("Failed to send PCB to schedular \n");
-        }
+        dequeue(&PCBs, currentPcb_pointer);
+        printf("Received process %d at time %d with runtime %d and priority %d \n",currentPcb->id,getClk(),currentPcb->remaining_time,currentPcb->priority);
+        // while (getClk() < currentPcb->arrival_time); //wait till a process arrives
+        // arrivedprocess.mtype = 0;
+        // send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
+        // if (send_val == -1){
+        //     perror("Failed to send PCB to schedular \n");
+        // }
         free(currentPcb);
     }
     // 7. Clear clock resources
