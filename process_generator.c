@@ -57,41 +57,43 @@ int main(int argc, char *argv[])
     {
         quantum = 0;
     }
-    // // 3. Initiate and create the scheduler and clock processes.
+    // 3. Initiate and create the scheduler and clock processes.
     //fork scheduler process
-    // int scheduler_id = fork();
-    // if (scheduler_id == 0)
-    // {
-    //     // compile scheduler code
-    //     int scheduler_compile = system("gcc scheduler.c -o scheduler.out");
-    //     if (scheduler_compile == 0)
-    //     {
-    //         // the forked process now runs the scheduler
-    //         execl("./scheduler.out", "scheduler.out",algo_chosen,quantum,NULL);
-    //     }
-    //     else
-    //     {
-    //         printf("Couldn't compile scheduler.c \n");
-    //         exit(1);
-    //     }
-    // }
+    int scheduler_id = fork();
+    if (scheduler_id == 0)
+    {
+        // compile scheduler code
+        int scheduler_compile = system("gcc scheduler.c -o scheduler.out");
+        if (scheduler_compile == 0)
+        {
+            // the forked process now runs the scheduler
+            execl("./scheduler.out", "scheduler.out",NULL);
+            printf("failed to execl");
+        }
+        else
+        {
+            printf("Couldn't compile scheduler.c \n");
+            exit(1);
+        }
+    }
     // fork clk process
-    // int clk_id = fork();
-    // if (clk_id == 0)
-    // {
-    //     //compile clk code
-    //     int clk_compile = system("gcc clk.c -o clk.out");
-    //     if (clk_compile == 0)
-    //     {
-    //         //the forked process now runs the clk
-    //         execl("./clk.out", "clk.out", NULL);
-    //     }
-    //     else
-    //     {
-    //         printf("Couldn't compile clk.out \n");
-    //         exit(1);
-    //     }
-    // }
+    int clk_id = fork();
+    if (clk_id == 0)
+    {
+        //compile clk code
+        int clk_compile = system("gcc clk.c -o clk.out");
+        if (clk_compile == 0)
+        {
+            //the forked process now runs the clk
+            execl("./clk.out", "clk.out", NULL);
+            printf("Fails to execl");
+        }
+        else
+        {
+            printf("Couldn't compile clk.out \n");
+            exit(1);
+        }
+    }
     // 4. Use this function after creating the clock process to initialize clock.
     initClk();
     // To get time use this function.
@@ -122,7 +124,6 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.waiting_time = 0;
         arrivedprocess.pcb.state = 2; //momken ne3melha enum
         while (getClk() < currentPcb->arrival_time); //wait till a process arrives
-        printf("clk: %d, arriv: %d",getClk(),currentPcb->arrival_time);
         printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
         arrivedprocess.mtype = 1;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
