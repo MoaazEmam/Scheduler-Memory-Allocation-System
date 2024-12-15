@@ -53,10 +53,6 @@ int main(int argc, char *argv[])
             exit(1);
         }
     }
-    else
-    {
-        quantum = 0;
-    }
     // 3. Initiate and create the scheduler and clock processes.
     //fork scheduler process
     int scheduler_id = fork();
@@ -67,7 +63,7 @@ int main(int argc, char *argv[])
         if (scheduler_compile == 0)
         {
             // the forked process now runs the scheduler
-            execl("./scheduler.out", "scheduler.out",NULL);
+            execl("./scheduler.out", "scheduler.out",argv[1],argv[2],NULL);
             printf("failed to execl");
         }
         else
