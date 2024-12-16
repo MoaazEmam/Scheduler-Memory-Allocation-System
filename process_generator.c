@@ -129,6 +129,7 @@ int main(int argc, char *argv[])
         }
         free(currentPcb);
     }
+    printf("ba2fel\n");
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
     int stat;
     wait(&stat);
