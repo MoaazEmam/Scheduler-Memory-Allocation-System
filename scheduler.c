@@ -105,36 +105,36 @@ void SJF()
         PCB *receivedPCB = malloc(sizeof(PCB));
         memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
         enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
-        printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime,receivedPCB->priority);
+        printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
     int mq_open = 1;
     // loop while there is still processes unfinished or the process generator didn't close the message queue
     while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
     {
-        int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
-        if (rec_val == -1) {
-            if (errno == ENOMSG) {
-                // No message in the queue 
-                errno = 0; // Reset errno to avoid stale values
-            } else {
-                mq_open = 0; //the process generator has closed the message queue
-            }
-        }
-        // if there is a process sent add it in the ready queue
-        if (rec_val != -1)
+        while (mq_open)
         {
-            PCB *receivedPCB = malloc(sizeof(PCB));
-            memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
-            // receivedPCB->id = receivedPCBbuff.pcb.id;
-            // receivedPCB->arrival_time = receivedPCBbuff.pcb.arrival_time;
-            // receivedPCB->runtime = receivedPCBbuff.pcb.runtime;
-            // receivedPCB->priority = receivedPCBbuff.pcb.priority;
-            // receivedPCB->pid = -1;
-            // receivedPCB->remaining_time = receivedPCBbuff.pcb.remaining_time;
-            // receivedPCB->waiting_time = 0;
-            // receivedPCB->state = READY;
-            enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
-            printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime,receivedPCB->priority);
+            int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
+            if (rec_val == -1)
+            {
+                if (errno == ENOMSG)
+                {
+                    // No message in the queue
+                    errno = 0; // Reset errno to avoid stale values
+                }
+                else
+                {
+                    mq_open = 0; // the process generator has closed the message queue
+                }
+                break;
+            }
+            // if there is a process sent add it in the ready queue
+            if (rec_val != -1)
+            {
+                PCB *receivedPCB = malloc(sizeof(PCB));
+                memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
+                enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
+                printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+            }
         }
         // if there is no process running and there is a ready process
         if (current_process == NULL && !isPriEmpty(ReadyQueue))
@@ -151,10 +151,10 @@ void SJF()
                 sprintf(id, "%d", getppid());
                 char runtime[20];
                 sprintf(runtime, "%d", current_process->runtime);
-                execl("./process.out", "process.out",runtime ,id, NULL);
+                execl("./process.out", "process.out", runtime, id, NULL);
                 printf("error in excel of process\n");
             }
-            printf("Process: %d : \n",current_process->id);
+            printf("Process: %d at time: %d\n", current_process->id, getClk());
             current_process->pid = current_processID;
         }
     }
@@ -167,7 +167,7 @@ void HPF()
 
 void ProcessFinishedSJF(int signum)
 {
-    printf("Process %d finished at time %d \n",current_process->id,getClk());
+    printf("Process %d finished at time %d \n", current_process->id, getClk());
     // if the process sends SIGUSR1 then the current process finished
     current_process->state = FINISHED;
     free(current_process);

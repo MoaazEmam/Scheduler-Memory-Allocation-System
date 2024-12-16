@@ -12,7 +12,7 @@ int main(int agrc, char *argv[])
 {
     initClk();
     signal(SIGCONT,myHandler);
-    printf("Running \n");
+    //printf("Running \n");
     //TODO The process needs to get the remaining time from somewhere
     remainingtime = atoi(argv[1]); //schedular sends the runtime as an argument
     time = getClk();
