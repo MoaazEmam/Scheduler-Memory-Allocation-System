@@ -3,21 +3,21 @@
 #define PRIORITY_QUEUE_H
 
 
-typedef struct Node {
+typedef struct priNode {
     PCB *pcb;
-    struct Node* next;
+    struct priNode* next;
     int priority;
-} Node;
+} priNode;
 
 typedef struct PriorityQueue {
-    Node* front;
+    priNode* front;
 } PriorityQueue;
 
 // Function prototypes
 PriorityQueue* createQueue();
-void enqueue(PriorityQueue* pq,PCB *pcb,int pri);
-bool dequeue(PriorityQueue* pq,PCB **retpcb);
-bool isEmpty(PriorityQueue* pq);
-void freeQueue(PriorityQueue* pq);
+void enqueuePri(PriorityQueue* pq,PCB *pcb,int pri);
+bool dequeuePri(PriorityQueue* pq,PCB **retpcb);
+bool isPriEmpty(PriorityQueue* pq);
+void freePriQueue(PriorityQueue* pq);
 
 #endif // PRIORITY_QUEUE_H

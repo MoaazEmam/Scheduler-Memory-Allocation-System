@@ -23,8 +23,7 @@ int main(int agrc, char *argv[])
             time = getClk();
         }
     }
-
+    kill (atoi(argv[1]),SIGUSR1); //send signal to scheduler that it finished
     destroyClk(false);
-
     return 0;
 }

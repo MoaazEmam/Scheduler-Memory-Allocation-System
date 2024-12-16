@@ -8,8 +8,8 @@ PriorityQueue* createQueue() {
 }
 
 // Enqueue an element in ascending order
-void enqueue(PriorityQueue* pq, PCB *pcb, int pri) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
+void enqueuePri(PriorityQueue* pq, PCB *pcb, int pri) {
+    priNode* newNode = (priNode*)malloc(sizeof(priNode));
     newNode->pcb = pcb;
     newNode->next = NULL;
     newNode->priority = pri;
@@ -20,7 +20,7 @@ void enqueue(PriorityQueue* pq, PCB *pcb, int pri) {
         pq->front = newNode;
     } else {
         // Find the correct position to insert the new node
-        Node* current = pq->front;
+        priNode* current = pq->front;
         while (current->next != NULL && current->next->priority <= pri) {
             current = current->next;
         }
@@ -30,12 +30,12 @@ void enqueue(PriorityQueue* pq, PCB *pcb, int pri) {
 }
 
 // Dequeue the element with the highest priority (smallest value)
-bool dequeue(PriorityQueue* pq, PCB** retpcb) {
-    if (isEmpty(pq)) {
+bool dequeuePri(PriorityQueue* pq, PCB** retpcb) {
+    if (isPriEmpty(pq)) {
         printf("Queue is empty!\n");
         return false;
     }
-    Node* temp = pq->front;
+    priNode* temp = pq->front;
 
     // Return the pointer to the dequeued PCB
     *retpcb = temp->pcb;
@@ -46,16 +46,17 @@ bool dequeue(PriorityQueue* pq, PCB** retpcb) {
 }
 
 // Check if the queue is empty
-bool isEmpty(PriorityQueue* pq) {
+bool isPriEmpty(PriorityQueue* pq) {
     return pq->front == NULL;
 }
 
 // Free the memory allocated for the queue
-void freeQueue(PriorityQueue* pq) {
-    while (!isEmpty(pq)) {
+void freePriQueue(PriorityQueue* pq) {
+    while (!isPriEmpty(pq)) {
         PCB* tempPcb = NULL;
-        dequeue(pq, &tempPcb);
+        dequeuePri(pq, &tempPcb);
         // PCB memory is not freed here because it should be managed by the caller
     }
     free(pq);
 }
+
