@@ -1,5 +1,10 @@
 #include "headers.h"
 
+void RR(int q);
+void MLFQ(int q);
+void SJF();
+void HPF();
+
 int main(int argc, char *argv[])
 {
     initClk();
@@ -15,7 +20,7 @@ int main(int argc, char *argv[])
         exit(-1);
     }
     //while(no more processes and ready queue is empty) still dk how we will implement it
-    switch (toai(argv[1])){
+    switch (atoi(argv[1])){
         case 1: 
         SJF();
         break;
@@ -25,11 +30,11 @@ int main(int argc, char *argv[])
         break;
 
         case 3: 
-        RR(toai(argv[2]));
+        RR(atoi(argv[2]));
         break;
 
         case 4: 
-        MLFQ(toai(argv[2]));
+        MLFQ(atoi(argv[2]));
         break;
     }
     //the up coming loop is just for testing
