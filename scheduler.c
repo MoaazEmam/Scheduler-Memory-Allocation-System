@@ -107,10 +107,14 @@ void SJF()
         enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime,receivedPCB->priority);
     }
+    int mq = true;
     // loop while there is still processes unfinished or the process generator didn't close the message queue
-    while (!isPriEmpty(ReadyQueue) || errno != EIDRM)
+    while (!isPriEmpty(ReadyQueue) || mq || current_process != NULL)
     {
         int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
+        if (errno == EIDRM){
+            mq = false;
+        }
         // if there is a process sent add it in the ready queue
         if (rec_val != -1)
         {
@@ -158,7 +162,7 @@ void HPF()
 
 void ProcessFinishedSJF(int signum)
 {
-    printf("Process %d finished \n",current_process->id);
+    printf("Process %d finished at time %d \n",current_process->id,getClk());
     // if the process sends SIGUSR1 then the current process finished
     current_process->state = FINISHED;
     // set the current process to null
