@@ -129,9 +129,12 @@ int main(int argc, char *argv[])
         }
         free(currentPcb);
     }
+    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
+    int stat;
+    wait(&stat);
     // 7. Clear clock resources
     destroyClk(true);
-    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
+    
     return 0;
 }
 
