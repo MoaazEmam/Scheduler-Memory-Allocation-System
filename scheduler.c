@@ -8,6 +8,20 @@ void ProcessFinishedSJF(int signum);
 
 PCB *current_process = NULL;
 
+bool arrIsEmpty(CircularQueue* arr[]){
+    bool empty=false;
+    for(int i=0;i<sizeof(arr);i++){
+        if(arr[i]->rear==NULL){
+            empty=true;
+        }
+        else {
+            empty=false;
+            return empty;
+        }
+    }
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
     initClk();
@@ -68,8 +82,27 @@ void RR(int q)
 {
 }
 
-void MLFQ(int q)
-{
+void MLFQ(int q){
+bool readyqEmpty=false;
+CircularQueue* queuearray[11]; //array holding queues for each priority level 
+//for loop to create 11 queues (pri levels 0 to 10)
+for (int i=0;i<11;i++){
+    CircularQueue *q=malloc(sizeof(CircularQueue));
+    initQueue(q);
+    queuearray[i]=q;
+}
+
+struct msgbuff sentPCB; //struct to recieve pcb from pgen
+while(!readyqEmpty){
+    readyqEmpty=!arrIsEmpty(queuearray);
+    int rcv_val= msgrcv(msgq_id,&sentPCB,sizeof(sentPCB.pcb),1,IPC_NOWAIT);
+    if(rcv_val!=-1){
+        //new pcb recieved, place it in correct queue
+        int pri=sentPCB.pcb.priority;
+        enqueue(queuearray[pri],&sentPCB);
+    }
+
+}
 }
 
 void SJF()
