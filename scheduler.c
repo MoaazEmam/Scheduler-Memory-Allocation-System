@@ -7,11 +7,13 @@ void HPF();
 void ProcessFinishedSJF(int signum);
 
 PCB *current_process = NULL;
+FILE *pFile;
+int WTA_sum = 0;
 
 int main(int argc, char *argv[])
 {
     initClk();
-    printf("algo: %s, quan: %s \n", argv[1], argv[2]);
+    // printf("algo: %s, quan: %s \n", argv[1], argv[2]);
     // set up message queue between process generator and scheduler
     // key_t msg_id;
     // int send_val;
@@ -76,6 +78,12 @@ void SJF()
 {
     // attach handler of finished processes
     signal(SIGUSR1, ProcessFinishedSJF);
+    //open output.log file
+    pFile = fopen("scheduler.log", "w");
+    fprintf(pFile,"#At time x process y state arr w total z remain y wait k \n");
+    float waiting_sum = 0; //sum of waiting time
+    float noProcess = 0; //number of processes
+    float runtime_sum = 0; //sum of runtime
     // set up message queue between process generator and schedular
     key_t msg_id;
     int send_val;
@@ -96,7 +104,7 @@ void SJF()
     // create a ready priority queue
     PriorityQueue *ReadyQueue = createQueue();
     struct msgbuff receivedPCBbuff;
-    printf("entering sjf\n");
+    //printf("entering sjf\n");
     // wait for first process to arrive to start the algo
     int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, !IPC_NOWAIT);
     // if there is a process sent add it in the ready queue
@@ -154,11 +162,25 @@ void SJF()
                 execl("./process.out", "process.out", runtime, id, NULL);
                 printf("error in excel of process\n");
             }
-            printf("Process: %d at time: %d\n", current_process->id, getClk());
+            current_process->waiting_time = getClk()- current_process->arrival_time;
+            waiting_sum += current_process->waiting_time;
+            runtime_sum += current_process->runtime;
+            noProcess++;
+            current_process->start_time = getClk();
+            fprintf(pFile,"At time %d process %d started arr %d total %d remain %d wait %d \n",getClk(),current_process->id,current_process->arrival_time,current_process->runtime,current_process->remaining_time,current_process->waiting_time);
             current_process->pid = current_processID;
         }
     }
-    printf("Done\n");
+    fclose(pFile);
+    float cpu_utilization = (runtime_sum / (getClk()-1)) * 100;
+    float avgWTA = WTA_sum / noProcess; 
+    float avgWaiting = waiting_sum / noProcess;
+    FILE *perf;
+    perf = fopen("scheduler.perf","w");
+    fprintf(perf, "CPU utilization = %.2f %% \n",cpu_utilization);
+    fprintf(perf, "Avg WTA = %.2f %% \n",avgWTA);
+    fprintf(perf,"Avg Waiting = %.2f %% \n",avgWaiting);
+    fclose(perf);
 }
 
 void HPF()
@@ -170,6 +192,12 @@ void ProcessFinishedSJF(int signum)
     printf("Process %d finished at time %d \n", current_process->id, getClk());
     // if the process sends SIGUSR1 then the current process finished
     current_process->state = FINISHED;
+    current_process->remaining_time = 0;
+    current_process->finished_time = getClk();
+    float TA = current_process->finished_time - current_process->arrival_time;
+    float WTA = TA/current_process->runtime;
+    WTA_sum += WTA; 
+    fprintf(pFile,"At time %d process %d finished arr %d total %d remain %d wait %d TA %.2f WTA %.2f\n",getClk(),current_process->id,current_process->arrival_time,current_process->runtime,current_process->remaining_time,current_process->waiting_time,TA,WTA);
     free(current_process);
     // set the current process to null
     current_process = NULL;

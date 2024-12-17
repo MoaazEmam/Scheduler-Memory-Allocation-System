@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         //printf("Received process %d with runtime %d and priority %d \n",readingPcb->id,readingPcb->runtime,readingPcb->priority);
         enqueue(PCBs,readingPcb);
     }
-    
+    fclose(pFile);
     //  2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
     /*  1. Shortest Job First (SJF)
         2. Preemptive Highest Priority First (HPF)

@@ -1,0 +1,13 @@
+#At time x process y state arr w total z remain y wait k 
+At time 1 process 2 started arr 1 total 2 remain 2 wait 0 
+At time 3 process 2 finished arr 1 total 2 remain 0 wait 0 TA 2.00 WTA 1.00
+At time 3 process 1 started arr 1 total 7 remain 7 wait 2 
+At time 10 process 1 finished arr 1 total 7 remain 0 wait 2 TA 9.00 WTA 1.29
+At time 10 process 6 started arr 7 total 2 remain 2 wait 3 
+At time 12 process 6 finished arr 7 total 2 remain 0 wait 3 TA 5.00 WTA 2.50
+At time 12 process 4 started arr 6 total 3 remain 3 wait 6 
+At time 15 process 4 finished arr 6 total 3 remain 0 wait 6 TA 9.00 WTA 3.00
+At time 15 process 3 started arr 4 total 5 remain 5 wait 11 
+At time 20 process 3 finished arr 4 total 5 remain 0 wait 11 TA 16.00 WTA 3.20
+At time 20 process 5 started arr 7 total 6 remain 6 wait 13 
+At time 26 process 5 finished arr 7 total 6 remain 0 wait 13 TA 19.00 WTA 3.17
