@@ -30,6 +30,9 @@ typedef struct PCB {
    int pid; //forking id
    int start_time;
    int finished_time;
+   int stopped_time;
+   int restarted_time;
+   int remainingTimeAfterStop;
 } PCB;
 
 enum STATE{

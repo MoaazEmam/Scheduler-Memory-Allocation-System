@@ -177,8 +177,134 @@ void SJF()
     fclose(perf);
 }
 
-void HPF()
-{
+void HPF() {
+    PriorityQueue *ReadyQueue = createQueue();  // Priority queue for processes
+    PCB *current_process = NULL;                
+    struct msgbuff receivedPCBbuff;   
+    FILE* logfile= fopen("scheduler.log", "w");          
+    int msgq_id, mq_open = 1; // msg_open da 3shan a3rf lesa el msg queue shaghala wala eh
+    int totalWaitTime = 0, totalTurnaroundTime = 0, totalProcesses = 0, cpuActiveTime = 0, rec_val;
+    key_t msg_id = ftok("msgfile", 65);
+    msgq_id = msgget(msg_id, 0666 | IPC_CREAT);
+    if (msgq_id == -1) {
+        perror("Error while creating the message queue for HPF");
+        exit(-1);
+    }
+
+    // Initialize the clock and get the starting time
+    initClk();
+    int clockTime = getClk();
+
+    // Create the message queue
+    while (getClk() != 1);
+    fprintf(logfile,"#At time x process y state arr w total z remain y wait k\n");
+
+    while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL) {
+    // Check for new processes in the message queue
+        if (isPriEmpty(ReadyQueue) && !current_process) {
+            rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, 0);
+        } else {
+            sleep(0.2);
+            rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
+        }
+         if (rec_val == -1) {
+            if (errno == ENOMSG) {
+                // No message in the queue 
+                errno = 0; // Reset errno to avoid stale values
+            } else {
+                mq_open = 0; //the process generator has closed the message queue
+            }
+        }
+
+        if (rec_val != -1) {
+            PCB *receivedPCB = malloc(sizeof(PCB));
+            memset(receivedPCB, 0, sizeof(PCB));
+            memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
+            enqueuePri(ReadyQueue, receivedPCB, receivedPCB->priority);
+            receivedPCB->remaining_time = receivedPCB->runtime;
+            fprintf(logfile,"Received process with id %d at time %d with runtime %d and priority %d\n",
+                receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+        }
+        
+        // Handle the currently running process
+        if (current_process) {
+            if ((current_process->remaining_time-1) == 0 ) {
+                // Process finished
+                fprintf(logfile,"At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n",getClk(), current_process->id, current_process->arrival_time, current_process->runtime,current_process->waiting_time, clockTime - current_process->arrival_time,(float)(clockTime - current_process->arrival_time) / current_process->runtime);
+
+                totalWaitTime += current_process->waiting_time;
+                totalTurnaroundTime += clockTime - current_process->arrival_time;
+
+                totalProcesses++;
+                current_process->state = FINISHED;
+                free(current_process);
+                current_process = NULL;
+            } else  {
+                current_process->remaining_time = current_process->remainingTimeAfterStop - (getClk() - current_process->restarted_time);
+                cpuActiveTime++;
+            }
+        }
+
+        // ba select process lw no process fel ready aw nakhod haga b priority 3alya
+        if (current_process && !isPriEmpty(ReadyQueue) && ReadyQueue->front->priority < current_process->priority)
+         {
+            // bahnadle el preemption
+            fprintf(logfile,"At time %d process %d stopped arr %d total %d remain %d wait %d\n",
+                    getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
+                    current_process->remaining_time, current_process->waiting_time);
+            kill(current_process->pid, SIGSTOP);
+            current_process->remainingTimeAfterStop = current_process->remaining_time;
+            current_process->stopped_time = getClk();
+
+            current_process->state = STOPPED;
+            enqueuePri(ReadyQueue, current_process, current_process->priority);
+            current_process->stopped_time = getClk();
+            current_process = NULL;
+        }
+
+        if (!current_process && !isPriEmpty(ReadyQueue)) {
+            dequeuePri(ReadyQueue, &current_process);
+            if (current_process->state == READY) {
+                // Start a new process
+                current_process->remaining_time = current_process->runtime;
+                current_process->remainingTimeAfterStop = current_process->runtime;
+                current_process->restarted_time = getClk();
+                current_process->pid = fork();
+                if (current_process->pid == 0) {
+                    while (1) pause(); // Waiting for SIGCONT
+                }
+                fprintf(logfile,"At time %d process %d started arr %d total %d remain %d wait %d\n",
+                       getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
+                       current_process->remaining_time, current_process->waiting_time);
+            } else if (current_process->state == STOPPED) {
+                // Resume a previously stopped process
+                kill(current_process->pid, SIGCONT);
+                current_process->waiting_time += getClk() - current_process->stopped_time;
+                current_process->restarted_time = getClk();
+
+                fprintf(logfile,"At time %d process %d resumed arr %d total %d remain %d wait %d\n",
+                       getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
+                       current_process->remaining_time, current_process->waiting_time);
+            }
+            current_process->state = RUNNING;  // harg3ha running baa whatever heia gdeeda wala preempted
+        }
+        
+
+        // Advance the clock
+        clockTime++;
+        while (getClk() < clockTime);
+    }
+
+    // Log performance metrics
+    FILE *perfFile = fopen("scheduler.perf", "w");
+    fprintf(perfFile,"CPU utilization = %.2f%%\n", ((float)cpuActiveTime / clockTime) * 100);
+    fprintf(perfFile,"Avg WTA = %.2f\n", (float)totalTurnaroundTime / totalProcesses);
+    fprintf(perfFile,"Avg Waiting = %.2f\n", (float)totalWaitTime / totalProcesses);
+    fclose(perfFile);
+    fclose(logfile);
+
+    freePriQueue(ReadyQueue);
+    destroyClk(true);  // Release shared clock resources
 }
 
 void ProcessFinishedSJF(int signum)
