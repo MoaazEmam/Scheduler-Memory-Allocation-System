@@ -8,7 +8,7 @@ void ProcessFinishedSJF(int signum);
 
 PCB *current_process = NULL;
 FILE *pFile;
-int WTA_sum = 0;
+float WTA_sum = 0;
 
 int main(int argc, char *argv[])
 {
@@ -94,12 +94,6 @@ void SJF()
         perror("Error in create");
         exit(-1);
     }
-    // //the up coming loop is just for testing
-    // struct msgbuff sentPCB;
-    // int rec_val = msgrcv(msgq_id, &sentPCB, sizeof(sentPCB.pcb), 1, !IPC_NOWAIT);
-    // if (rec_val != 1){
-    //     printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n",sentPCB.pcb.id,getClk(),sentPCB.pcb.runtime,sentPCB.pcb.priority);
-    // }
 
     // create a ready priority queue
     PriorityQueue *ReadyQueue = createQueue();
@@ -113,7 +107,7 @@ void SJF()
         PCB *receivedPCB = malloc(sizeof(PCB));
         memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
         enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
-        printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+        //printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
     int mq_open = 1;
     // loop while there is still processes unfinished or the process generator didn't close the message queue
@@ -127,7 +121,7 @@ void SJF()
                 if (errno == ENOMSG)
                 {
                     // No message in the queue
-                    errno = 0; // Reset errno to avoid stale values
+                    errno = 0;
                 }
                 else
                 {
@@ -141,7 +135,7 @@ void SJF()
                 PCB *receivedPCB = malloc(sizeof(PCB));
                 memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
                 enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
-                printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+                //printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
             }
         }
         // if there is no process running and there is a ready process
@@ -160,7 +154,7 @@ void SJF()
                 char runtime[20];
                 sprintf(runtime, "%d", current_process->runtime);
                 execl("./process.out", "process.out", runtime, id, NULL);
-                printf("error in excel of process\n");
+                //printf("error in excel of process\n");
             }
             current_process->waiting_time = getClk()- current_process->arrival_time;
             waiting_sum += current_process->waiting_time;
@@ -178,8 +172,8 @@ void SJF()
     FILE *perf;
     perf = fopen("scheduler.perf","w");
     fprintf(perf, "CPU utilization = %.2f %% \n",cpu_utilization);
-    fprintf(perf, "Avg WTA = %.2f %% \n",avgWTA);
-    fprintf(perf,"Avg Waiting = %.2f %% \n",avgWaiting);
+    fprintf(perf, "Avg WTA = %.2f \n",avgWTA);
+    fprintf(perf,"Avg Waiting = %.2f \n",avgWaiting);
     fclose(perf);
 }
 
