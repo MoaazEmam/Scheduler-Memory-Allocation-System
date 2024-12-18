@@ -10,6 +10,16 @@ PCB *current_process = NULL;
 FILE *pFile;
 float WTA_sum = 0;
 
+bool arrIsEmpty(CircularQueue *arr[], int size)
+{
+    for (int i = 0; i < size; i++)
+    {
+        if (arr[i]->rear != NULL) // If any queue is not empty
+            return false;
+    }
+    return true; // All queues are empty
+}
+
 int main(int argc, char *argv[])
 {
     initClk();
@@ -72,6 +82,188 @@ void RR(int q)
 
 void MLFQ(int q)
 {
+    signal(SIGUSR1, ProcessFinishedSJF);
+    bool readyqEmpty = false;
+    CircularQueue *queuearray[11]; // array holding queues for each priority level
+    int current_level=0;
+    pFile = fopen("scheduler.log", "w");
+    fprintf(pFile,"#At time x process y state arr w total z remain y wait k \n");
+    fflush(pFile);
+    float waiting_sum = 0; // sum of waiting time
+    float noProcess = 0;   // number of processes
+    float runtime_sum = 0; // sum of runtime
+    printf("MLFQ is running....\n");
+    // for loop to create 11 queues (pri levels 0 to 10)
+    for (int i = 0; i < 11; i++)
+    {
+        CircularQueue *q = malloc(sizeof(CircularQueue));
+        initQueue(q);
+        queuearray[i] = q;
+    }
+    struct msgbuff receivedPCBbuff;
+    ; // struct to recieve pcb from pgen
+
+    // setting up msg queue with process gen
+    key_t msg_id;
+    int send_val;
+    msg_id = ftok("msgfile", 65);
+    int msgq_id = msgget(msg_id, 0666 | IPC_CREAT);
+    if (msgq_id == -1)
+    {
+        perror("Error in create");
+        exit(-1);
+    }
+    // wait for first process to be sent
+    printf("Waiting for first process to be sent\n");
+    int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, !IPC_NOWAIT);
+    // printf("rec_val = %d\n",rec_val);
+    //  if there is a process sent add it in the ready queue
+    if (rec_val != 1)
+    {
+        noProcess++;
+        PCB *receivedPCB = malloc(sizeof(PCB));
+        memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
+        // printf("now enqueing process %d at %d\n",receivedPCB->id,getClk());
+        enqueue(queuearray[receivedPCB->priority], receivedPCB);
+        // printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+    }
+    int msgq_open = 1;
+    PCB *new_process = malloc(sizeof(PCB));
+    int currentprocessID;
+    while (!arrIsEmpty(queuearray, 11) || msgq_open == 1 || current_process != NULL)
+    {
+        // printf("In big while\n");
+        while (msgq_open)
+        {
+            // printf("in small while\n");
+            rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
+            // printf("%d %d %d\n",getClk(),rec_val,errno);
+            // printf("rec_val = %d\n",rec_val);
+            if (rec_val == -1)
+            {
+                if (errno == ENOMSG)
+                {
+                    // No message in the queue
+                    errno = 0;
+                }
+                else
+                {
+                    msgq_open = 0; // the process generator has closed the message queue
+                }
+                break;
+            }
+            else //(rec_val != -1)
+            {
+                noProcess++;
+                PCB *receivedPCB = malloc(sizeof(PCB));
+                memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
+                // printf("now enqueing process %d at %d\n",receivedPCB->id,getClk());
+                enqueue(queuearray[receivedPCB->priority], receivedPCB);
+                // printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+            }
+        }
+
+        if (current_process == NULL && !arrIsEmpty(queuearray, 11))
+        {
+            // find process to start
+            current_level = 0;
+            while (1)
+            {
+                if (queuearray[current_level]->rear != NULL)
+                    break;
+                current_level++;
+            }
+            if (current_level < 11)
+            {
+                // printf("dequeuing process %d at %d\n",queuearray[current_level]->rear->pcb->id,getClk());
+                dequeue(queuearray[current_level], &current_process);
+                // printf("dequeued proces %d at %d\n",current_process->id,getClk());
+                if (current_process != NULL)
+                {
+
+                    if (current_process->state == STOPPED)
+                    {
+                        //totalruntime = current_process->runtime - current_process->remaining_time;
+                        //printf("writing in file\n");
+                        // printf("Restarting process %d\n", current_process->id);
+                        current_process->state = RUNNING;
+                        current_process->restarted_time = getClk();
+                        currentprocessID = current_process->pid;
+                        current_process->waiting_time+=getClk()-current_process->stopped_time;
+                        waiting_sum+=current_process->waiting_time;
+                        fprintf(pFile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                        fflush(pFile);
+                        kill(currentprocessID, SIGCONT);
+                    }
+                    else if (current_process->state == READY)
+                    {
+                        runtime_sum+=current_process->runtime;
+                        current_process->waiting_time = getClk() - current_process->arrival_time;
+                        waiting_sum+=current_process->waiting_time;
+                        current_process->state = RUNNING;
+                        current_process->start_time = getClk();
+                        current_process->restarted_time = getClk();
+                        //totalruntime=0;
+                        current_process->remaining_time=current_process->runtime;
+                        fprintf(pFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                        fflush(pFile);
+                        currentprocessID = fork();
+                        if (currentprocessID == 0)
+                        {
+                            // run it and send the process the scheduler's id
+                            char id[20];
+                            sprintf(id, "%d", getppid());
+                            char runtime[20];
+                            sprintf(runtime, "%d", current_process->runtime);
+                            execl("./process.out", "process.out", runtime, id, NULL);
+                            printf("error in excel of process\n");
+                        }
+                        printf("Process with id %d running\n", current_process->id);
+                        current_process->pid = currentprocessID;
+                    }
+                }
+            }
+        }
+        else if (current_process != NULL && getClk() - current_process->restarted_time >= q)
+        {
+            if (current_process->state == RUNNING)
+            {
+                //printf("quantum passed on running process %d.....stopping\n", current_process->id);
+                current_process->state = STOPPED;
+                current_process->stopped_time = getClk();
+                current_process->remaining_time -= q;
+                currentprocessID = current_process->pid;
+                fprintf(pFile, "At time %d process %d stopped arr %d total %d remain %d wait %d\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                fflush(pFile);
+                kill(currentprocessID, SIGSTOP);
+                if (current_level < 10)
+                {
+                    // printf("enqueuing process %d at %d into level %d\n",current_process->id,getClk(),current_level+1);
+                    enqueue(queuearray[current_level + 1], current_process);
+                    // printf("enqueued process %d at %d into level %d\n",current_process->id,getClk(),current_level+1);
+                }
+                else
+                {
+                    // printf("enqueuing process %d at %d into level %d\n",current_process->id,getClk(),current_level);
+                    enqueue(queuearray[current_process->priority], current_process);
+                    // printf("enqueued process %d at %d into level %d\n",current_process->id,getClk(),current_level);
+                }
+                current_process = NULL;
+            }
+        }
+        // printf("array empty:%d msgq_open:%d current null? : %d\n",!arrIsEmpty(queuearray, 11),msgq_open,current_process==NULL);
+        // printf("finish iter of big while");
+    }
+    fclose(pFile);
+    float cpu_utilization = (runtime_sum / (getClk()-1)) * 100;
+    float avgWTA = WTA_sum / noProcess; 
+    float avgWaiting = waiting_sum / noProcess;
+    FILE *perf;
+    perf = fopen("scheduler.perf","w");
+    fprintf(perf, "CPU utilization = %.2f %% \n",cpu_utilization);
+    fprintf(perf, "Avg WTA = %.2f \n",avgWTA);
+    fprintf(perf,"Avg Waiting = %.2f \n",avgWaiting);
+    fclose(perf);
 }
 
 void SJF()
@@ -113,6 +305,7 @@ void SJF()
     // loop while there is still processes unfinished or the process generator didn't close the message queue
     while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
     {
+        //sleep(0.2);
         while (mq_open)
         {
             int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
@@ -318,6 +511,7 @@ void ProcessFinishedSJF(int signum)
     float WTA = TA/current_process->runtime;
     WTA_sum += WTA; 
     fprintf(pFile,"At time %d process %d finished arr %d total %d remain %d wait %d TA %.2f WTA %.2f\n",getClk(),current_process->id,current_process->arrival_time,current_process->runtime,current_process->remaining_time,current_process->waiting_time,TA,WTA);
+    fflush(pFile);
     free(current_process);
     // set the current process to null
     current_process = NULL;

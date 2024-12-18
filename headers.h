@@ -122,6 +122,7 @@ void enqueue(CircularQueue* q, PCB* pcb) {
         printf("Memory allocation failed\n");
         return;
     }
+    if (pcb !=NULL){
     newNode->pcb = pcb;
 
     if (isEmpty(q)) {
@@ -131,6 +132,10 @@ void enqueue(CircularQueue* q, PCB* pcb) {
         newNode->next = q->rear->next;
         q->rear->next = newNode;
         q->rear = newNode;
+    }
+    }
+    else{
+        printf("PCB is NULL \n");
     }
 }
 
