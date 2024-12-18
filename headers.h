@@ -44,6 +44,8 @@ enum STATE{
     STOPPED //5
 };
 
+const char *stateStrings[] = {"READY", "RUNNING", "FINISHED", "STARTED","RESUMED","STOPPED"};
+
 typedef struct msgbuff
 {
     long mtype;
