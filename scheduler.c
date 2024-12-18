@@ -546,10 +546,12 @@ void HPF()
 {
     PriorityQueue *ReadyQueue = createQueue(); // Priority queue for processes
     PCB *current_process = NULL;
-    struct msgbuff receivedPCBbuff;
     FILE *logfile = fopen("scheduler.log", "w");
+    struct msgbuff receivedPCBbuff;
     int msgq_id, mq_open = 1; // msg_open da 3shan a3rf lesa el msg queue shaghala wala eh
-    int totalWaitTime = 0, totalTurnaroundTime = 0, totalProcesses = 0, cpuActiveTime = 0, rec_val;
+    int totalWaitTime = 0, totalTurnaroundTime = 0, totalProcesses = 0, rec_val;
+    float WTA_sum = 0, WTA = 0;
+    float runtime_sum = 0;
     key_t msg_id = ftok("msgfile", 65);
     msgq_id = msgget(msg_id, 0666 | IPC_CREAT);
     if (msgq_id == -1)
@@ -599,8 +601,8 @@ void HPF()
             memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
             enqueuePri(ReadyQueue, receivedPCB, receivedPCB->priority);
             receivedPCB->remaining_time = receivedPCB->runtime;
-            fprintf(logfile, "Received process with id %d at time %d with runtime %d and priority %d\n",
-                    receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+            printf("Received process with id %d at time %d with runtime %d and priority %d\n",
+                   receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
         }
 
         // Handle the currently running process
@@ -612,8 +614,9 @@ void HPF()
                 fprintf(logfile, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->waiting_time, clockTime - current_process->arrival_time, (float)(clockTime - current_process->arrival_time) / current_process->runtime);
 
                 totalWaitTime += current_process->waiting_time;
-                totalTurnaroundTime += clockTime - current_process->arrival_time;
-
+                totalTurnaroundTime += getClk() - current_process->arrival_time;
+                WTA = (float)(getClk() - current_process->arrival_time) / current_process->runtime;
+                WTA_sum += WTA;
                 totalProcesses++;
                 current_process->state = FINISHED;
                 free(current_process);
@@ -622,7 +625,6 @@ void HPF()
             else
             {
                 current_process->remaining_time = current_process->remainingTimeAfterStop - (getClk() - current_process->restarted_time);
-                cpuActiveTime++;
             }
         }
 
@@ -639,18 +641,19 @@ void HPF()
 
             current_process->state = STOPPED;
             enqueuePri(ReadyQueue, current_process, current_process->priority);
-            current_process->stopped_time = getClk();
             current_process = NULL;
         }
 
         if (!current_process && !isPriEmpty(ReadyQueue))
         {
             dequeuePri(ReadyQueue, &current_process);
+
             if (current_process->state == READY)
             {
                 // Start a new process
                 current_process->remaining_time = current_process->runtime;
                 current_process->remainingTimeAfterStop = current_process->runtime;
+                runtime_sum += current_process->runtime;
                 current_process->restarted_time = getClk();
                 current_process->pid = fork();
                 if (current_process->pid == 0)
@@ -658,6 +661,9 @@ void HPF()
                     while (1)
                         pause(); // Waiting for SIGCONT
                 }
+                // Update wait time
+                current_process->waiting_time += (getClk() - current_process->arrival_time);
+
                 fprintf(logfile, "At time %d process %d started arr %d total %d remain %d wait %d\n",
                         getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
                         current_process->remaining_time, current_process->waiting_time);
@@ -666,7 +672,7 @@ void HPF()
             {
                 // Resume a previously stopped process
                 kill(current_process->pid, SIGCONT);
-                current_process->waiting_time += getClk() - current_process->stopped_time;
+                current_process->waiting_time += (getClk() - current_process->stopped_time); // Correct wait time
                 current_process->restarted_time = getClk();
 
                 fprintf(logfile, "At time %d process %d resumed arr %d total %d remain %d wait %d\n",
@@ -683,11 +689,15 @@ void HPF()
     }
 
     // Log performance metrics
-    FILE *perfFile = fopen("scheduler.perf", "w");
-    fprintf(perfFile, "CPU utilization = %.2f%%\n", ((float)cpuActiveTime / clockTime) * 100);
-    fprintf(perfFile, "Avg WTA = %.2f\n", (float)totalTurnaroundTime / totalProcesses);
-    fprintf(perfFile, "Avg Waiting = %.2f\n", (float)totalWaitTime / totalProcesses);
-    fclose(perfFile);
+    float cpu_utilization = (runtime_sum / (getClk() - 1)) * 100;
+    float avgWTA = WTA_sum / totalProcesses;
+    float avgWaiting = (float)totalWaitTime / totalProcesses;
+    FILE *perf;
+    perf = fopen("scheduler.perf", "w");
+    fprintf(perf, "CPU utilization = %.2f %% \n", cpu_utilization);
+    fprintf(perf, "Avg WTA = %.2f \n", avgWTA);
+    fprintf(perf, "Avg Waiting = %.2f \n", avgWaiting);
+    fclose(perf);
     fclose(logfile);
 
     freePriQueue(ReadyQueue);
