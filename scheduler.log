@@ -1,29 +1,20 @@
-#At time x process y state arr w total z remain y wait k 
-At time 4 process 1 STARTED arr 4 total 11 remain 11 wait 0
-At time 9 process 1 STOPPED arr 4 total 11 remain 6 wait 0
-At time 9 process 2 STARTED arr 7 total 2 remain 2 wait 2
-At time 11 process 2 FINISHED arr 7 total 2 remain 0 wait 2 TA 3.00 WTA 1.50
-At time 11 process 3 STARTED arr 8 total 28 remain 28 wait 3
-At time 16 process 3 STOPPED arr 8 total 28 remain 23 wait 3
-At time 16 process 1 RESUMED arr 4 total 11 remain 6 wait 7
-At time 21 process 1 STOPPED arr 4 total 11 remain 1 wait 7
-At time 21 process 4 STARTED arr 13 total 7 remain 7 wait 8
-At time 26 process 4 STOPPED arr 13 total 7 remain 2 wait 8
-At time 26 process 3 RESUMED arr 8 total 28 remain 23 wait 13
-At time 31 process 3 STOPPED arr 8 total 28 remain 18 wait 13
-At time 31 process 1 RESUMED arr 4 total 11 remain 1 wait 17
-At time 32 process 1 FINISHED arr 4 total 11 remain 0 wait 17 TA 27.00 WTA 2.45
-At time 32 process 5 STARTED arr 22 total 7 remain 7 wait 10
-At time 37 process 5 STOPPED arr 22 total 7 remain 2 wait 10
-At time 37 process 4 RESUMED arr 13 total 7 remain 2 wait 19
-At time 39 process 4 FINISHED arr 13 total 7 remain 0 wait 19 TA 25.00 WTA 3.57
-At time 39 process 3 RESUMED arr 8 total 28 remain 18 wait 21
-At time 44 process 3 STOPPED arr 8 total 28 remain 13 wait 21
-At time 44 process 5 RESUMED arr 22 total 7 remain 2 wait 17
-At time 46 process 5 FINISHED arr 22 total 7 remain 0 wait 17 TA 23.00 WTA 3.29
-At time 46 process 3 RESUMED arr 8 total 28 remain 13 wait 23
-At time 51 process 3 STOPPED arr 8 total 28 remain 8 wait 23
-At time 51 process 3 RESUMED arr 8 total 28 remain 8 wait 23
-At time 56 process 3 STOPPED arr 8 total 28 remain 3 wait 23
-At time 56 process 3 RESUMED arr 8 total 28 remain 3 wait 23
-At time 59 process 3 FINISHED arr 8 total 28 remain 0 wait 23 TA 50.00 WTA 1.79
+#At time x process y state arr w total z remain y wait k
+Received process with id 1 at time 4 with runtime 11 and priority 9
+At time 4 process 1 started arr 4 total 11 remain 11 wait 0
+Received process with id 2 at time 7 with runtime 2 and priority 8
+At time 7 process 1 stopped arr 4 total 11 remain 8 wait 0
+At time 7 process 2 started arr 7 total 2 remain 2 wait 0
+Received process with id 3 at time 8 with runtime 28 and priority 0
+At time 8 process 2 stopped arr 7 total 2 remain 1 wait 0
+At time 8 process 3 started arr 8 total 28 remain 28 wait 0
+Received process with id 4 at time 13 with runtime 7 and priority 6
+Received process with id 5 at time 22 with runtime 7 and priority 8
+At time 36 process 3 finished arr 8 total 28 remain 0 wait 0 TA 28 WTA 1.00
+At time 36 process 4 started arr 13 total 7 remain 7 wait 0
+At time 43 process 4 finished arr 13 total 7 remain 0 wait 0 TA 30 WTA 4.29
+At time 43 process 2 resumed arr 7 total 2 remain 1 wait 35
+At time 44 process 2 finished arr 7 total 2 remain 0 wait 35 TA 37 WTA 18.50
+At time 44 process 5 started arr 22 total 7 remain 7 wait 0
+At time 51 process 5 finished arr 22 total 7 remain 0 wait 0 TA 29 WTA 4.14
+At time 51 process 1 resumed arr 4 total 11 remain 8 wait 44
+At time 59 process 1 finished arr 4 total 11 remain 0 wait 44 TA 55 WTA 5.00
