@@ -58,7 +58,7 @@ void displayQueue(CircularQueue* q) {
     Node* temp = q->rear->next;
     printf("Queue elements: ");
     do {
-        printf("%d ", temp->pcb->pri);
+        printf("%d ", temp->pcb->priority);
         temp = temp->next;
     } while (temp != q->rear->next);
     printf("\n");
