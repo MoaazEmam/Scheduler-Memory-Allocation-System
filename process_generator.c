@@ -20,15 +20,16 @@ int main(int argc, char *argv[])
         printf("no such file.");
         return 1;
     }
-    int id,arrival,runtime,priority;
+    int id,arrival,runtime,priority,memsize;
     fscanf(pFile, "%*[^\n]\n");
-    while (fscanf(pFile, "%d %d %d %d", &id, &arrival, &runtime, &priority) == 4) {
+    while (fscanf(pFile, "%d %d %d %d %d", &id, &arrival, &runtime, &priority,&memsize) == 5) {
         PCB* readingPcb;
         readingPcb = malloc(sizeof(PCB));
         readingPcb->id = id;
         readingPcb->arrival_time = arrival;
         readingPcb->runtime = runtime;
         readingPcb->priority = priority;
+        readingPcb->memsize=memsize;
         //printf("Received process %d with runtime %d and priority %d \n",readingPcb->id,readingPcb->runtime,readingPcb->priority);
         enqueue(PCBs,readingPcb);
     }
@@ -120,8 +121,9 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.remaining_time = currentPcb->runtime;
         arrivedprocess.pcb.waiting_time = 0;
         arrivedprocess.pcb.state = READY; //momken ne3melha enum....3mlnaha f3lan b enum :)
+        arrivedprocess.pcb.memsize=currentPcb->memsize;
         while (getClk() < currentPcb->arrival_time); //wait till a process arrives
-        printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
+        printf("Sent process %d with arrival time %d and runtime %d and priority %d memsize %d\n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority,arrivedprocess.pcb.memsize);
         arrivedprocess.mtype = 1;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
         if (send_val == -1){

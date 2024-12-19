@@ -33,6 +33,8 @@ typedef struct PCB {
    int stopped_time;
    int restarted_time;
    int remainingTimeAfterStop;
+   int memsize;
+   int start_address;
 } PCB;
 
 enum STATE{
