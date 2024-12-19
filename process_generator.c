@@ -131,13 +131,15 @@ int main(int argc, char *argv[])
         }
         free(currentPcb);
     }
-    sleep(1); //give time for scheduler to take the last arriving processes (1 sec won't affect the ending of the algo bec the last sent process must at least for min 1 sec, we can use signal instead but increases the overhead)
-    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
+    //sleep(1); //give time for scheduler to take the last arriving processes (1 sec won't affect the ending of the algo bec the last sent process must at least for min 1 sec, we can use signal instead but increases the overhead)
+    //msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
+    kill (scheduler_id,SIGUSR2);
     int stat;
     wait(&stat);
+
     // 7. Clear clock resources
+    msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
     destroyClk(true);
-    
     return 0;
 }
 

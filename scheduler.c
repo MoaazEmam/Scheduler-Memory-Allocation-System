@@ -6,10 +6,12 @@ void SJF();
 void HPF();
 void ProcessFinishedSJF(int signum);
 void ProcessFinishedRR(int signum);
+void generatorTerminate(int signum);
 
 PCB *current_process = NULL;
 FILE *pFile;
 float WTA_sum = 0;
+int mq_open = 1;
 
 bool arrIsEmpty(CircularQueue *arr[], int size)
 {
@@ -21,9 +23,13 @@ bool arrIsEmpty(CircularQueue *arr[], int size)
     return true; // All queues are empty
 }
 
+
+
 int main(int argc, char *argv[])
 {
     initClk();
+     // attach handler of finished process generator
+    signal(SIGUSR2, generatorTerminate);
     // printf("algo: %s, quan: %s \n", argv[1], argv[2]);
     // set up message queue between process generator and scheduler
     // key_t msg_id;
@@ -61,15 +67,7 @@ int main(int argc, char *argv[])
         MLFQ(atoi(argv[2]));
         break;
     }
-    // the up coming loop is just for testing
-    // ill leave the test loop lw 7ad 3yz yeshof setting up el msgq h comment it out bas
-    //  struct msgbuff sentPCB;
-    //  while(1){
-    //      int rec_val = msgrcv(msgq_id, &sentPCB, sizeof(sentPCB.pcb), 1, !IPC_NOWAIT);
-    //      if (rec_val != 1){
-    //          printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n",sentPCB.pcb.id,getClk(),sentPCB.pcb.runtime,sentPCB.pcb.priority);
-    //      }
-    //  }
+
     // TODO: implement the scheduler.
     // TODO: upon termination release the clock resources.
 
@@ -114,7 +112,7 @@ void RR(int q)
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
     bool first_time = 1;
-    int mq_open = 1;
+    //int mq_open = 1;
     // main loop
     while (!isEmpty(readyq) || current_process != NULL || mq_open)
     {
@@ -140,10 +138,10 @@ void RR(int q)
                     // No message in the queue
                     errno = 0;
                 }
-                else
-                {
-                    mq_open = 0; // the process generator has closed the message queue
-                }
+                // else
+                // {
+                //     mq_open = 0; // the process generator has closed the message queue
+                // }
                 break;
             }
             // if there is a process sent add it in the ready queue
@@ -298,13 +296,13 @@ void MLFQ(int q)
         enqueue(queuearray[receivedPCB->priority], receivedPCB);
         // printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
-    int msgq_open = 1;
+    //int msgq_open = 1;
     PCB *new_process = malloc(sizeof(PCB));
     int currentprocessID;
-    while (!arrIsEmpty(queuearray, 11) || msgq_open == 1 || current_process != NULL)
+    while (!arrIsEmpty(queuearray, 11) || mq_open == 1 || current_process != NULL)
     {
         // printf("In big while\n");
-        while (msgq_open)
+        while (mq_open)
         {
             // printf("in small while\n");
             rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
@@ -317,10 +315,10 @@ void MLFQ(int q)
                     // No message in the queue
                     errno = 0;
                 }
-                else
-                {
-                    msgq_open = 0; // the process generator has closed the message queue
-                }
+                // else
+                // {
+                //     msgq_open = 0; // the process generator has closed the message queue
+                // }
                 break;
             }
             else //(rec_val != -1)
@@ -427,7 +425,7 @@ void MLFQ(int q)
         // printf("finish iter of big while");
     }
     fclose(pFile);
-    float cpu_utilization = (runtime_sum / (getClk() - 1)) * 100;
+    float cpu_utilization = (runtime_sum / (getClk())) * 100;
     float avgWTA = WTA_sum / noProcess;
     float avgWaiting = waiting_sum / noProcess;
     FILE *perf;
@@ -473,7 +471,7 @@ void SJF()
         enqueuePri(ReadyQueue, receivedPCB, receivedPCB->runtime);
         // printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
-    int mq_open = 1;
+    //int mq_open = 1;
     // loop while there is still processes unfinished or the process generator didn't close the message queue
     while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
     {
@@ -488,10 +486,10 @@ void SJF()
                     // No message in the queue
                     errno = 0;
                 }
-                else
-                {
-                    mq_open = 0; // the process generator has closed the message queue
-                }
+                // else
+                // {
+                //     mq_open = 0; // the process generator has closed the message queue
+                // }
                 break;
             }
             // if there is a process sent add it in the ready queue
@@ -531,7 +529,7 @@ void SJF()
         }
     }
     fclose(pFile);
-    float cpu_utilization = (runtime_sum / (getClk() - 1)) * 100;
+    float cpu_utilization = (runtime_sum / (getClk())) * 100;
     float avgWTA = WTA_sum / noProcess;
     float avgWaiting = waiting_sum / noProcess;
     FILE *perf;
@@ -548,7 +546,7 @@ void HPF()
     PCB *current_process = NULL;
     FILE *logfile = fopen("scheduler.log", "w");
     struct msgbuff receivedPCBbuff;
-    int msgq_id, mq_open = 1; // msg_open da 3shan a3rf lesa el msg queue shaghala wala eh
+    int msgq_id;
     int totalWaitTime = 0, totalTurnaroundTime = 0, totalProcesses = 0, rec_val;
     float WTA_sum = 0, WTA = 0;
     float runtime_sum = 0;
@@ -561,12 +559,11 @@ void HPF()
     }
 
     // Initialize the clock and get the starting time
-    initClk();
+    //initClk();
     int clockTime = getClk();
 
     // Create the message queue
-    while (getClk() != 1)
-        ;
+    //while (getClk() != 1);
     fprintf(logfile, "#At time x process y state arr w total z remain y wait k\n");
 
     while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
@@ -588,10 +585,10 @@ void HPF()
                 // No message in the queue
                 errno = 0; // Reset errno to avoid stale values
             }
-            else
-            {
-                mq_open = 0; // the process generator has closed the message queue
-            }
+            // else
+            // {
+            //     mq_open = 0; // the process generator has closed the message queue
+            // }
         }
 
         if (rec_val != -1)
@@ -728,4 +725,8 @@ void ProcessFinishedRR(int signum)
     // current_process->state = FINISHED;
     // // set the current process to null
     // current_process = NULL;
+}
+
+void generatorTerminate(int signum){
+    mq_open = 0;
 }
