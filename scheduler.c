@@ -130,7 +130,7 @@ void RR(int q)
         // }
        
         
-        while (mq_open)
+        while (1)
         {
             int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 0, IPC_NOWAIT);
              if (rec_val != -1)
