@@ -348,7 +348,7 @@ bool allocate(BuddyMemory *head, PCB *pcb, int reqsize, int start)
     {
         allocated = allocate(head->right, pcb, reqsize, head->start + (head->memsize / 2));
     }
-    if (head->is_free && head->memsize > reqsize)
+    if (head->is_free && head->memsize > reqsize) //why dont we check if allocated??
     {
         head->is_free = false;
         head->pcbID = pcb->id;
