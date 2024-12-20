@@ -375,13 +375,10 @@ void deallocate(BuddyMemory *head, int pcbStart)
 {
     if (!head)
         return;
-    if (head->is_free)
-        return;
     if (!head->is_free && head->start == pcbStart)
     {
         head->is_free = true;
         head->pcbID = -1;
-        free(head);
         return;
     }
     if (!head->left || !head->right)
@@ -392,6 +389,8 @@ void deallocate(BuddyMemory *head, int pcbStart)
     {
         if (!head->left->right && !head->left->left && !head->right->left && !head->right->right)
         {
+            free(head->left);
+            free(head->right);
             head->left = NULL;
             head->right = NULL;
         }

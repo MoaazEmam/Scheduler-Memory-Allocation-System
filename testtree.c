@@ -119,13 +119,38 @@ int main()
     printf("\nMemory Tree:\n");
     displayTree(root, 0, "Root");
 
-    // Deallocate PCB 2
-    // printf("\nDeallocating PCB 2:\n");
-    // deallocate(root, pcb2.start_address);
+    //Deallocate PCB 2
+    printf("\nDeallocating PCB 1:\n");
+    deallocate(root, pcb1.start_address);
 
-    // Display memory tree after deallocation
-    // printf("\nMemory Tree After Deallocation:\n");
-    // displayTree(root, 0);
+    //Display memory tree after deallocation
+    printf("\nMemory Tree After Deallocation:\n");
+    displayTree(root, 0,"Root");
+
+        //Deallocate PCB 2
+    printf("\nDeallocating PCB 5:\n");
+    deallocate(root, pcb5.start_address);
+
+    //Display memory tree after deallocation
+    printf("\nMemory Tree After Deallocation:\n");
+    displayTree(root, 0,"Root");
+
+        //Deallocate PCB 2
+    printf("\nDeallocating PCB 4:\n");
+    deallocate(root, pcb4.start_address);
+
+    //Display memory tree after deallocation
+    printf("\nMemory Tree After Deallocation:\n");
+    displayTree(root, 0,"Root");
+
+    //Deallocate PCB 2
+    printf("\nDeallocating PCB 3:\n");
+    deallocate(root, pcb3.start_address);
+
+    //Display memory tree after deallocation
+    printf("\nMemory Tree After Deallocation:\n");
+    displayTree(root, 0,"Root");
+
 
     // Free the root block
     free(root);
