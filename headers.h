@@ -181,7 +181,8 @@ bool dequeue(CircularQueue *q, PCB **retpcb)
     return true;
 }
 
-void peak(CircularQueue *q,PCB **retpcb){
+void peak(CircularQueue *q, PCB **retpcb)
+{
     Node *temp = q->rear->next;
     *retpcb = temp->pcb;
 }
@@ -319,41 +320,54 @@ typedef struct BuddyMemory
 //     struct BuddyMemory *root;
 // } MemoryHead;
 
-bool allocate(BuddyMemory *head, PCB *pcb, int reqsize, int start)
+bool allocate(BuddyMemory *head, PCB *pcb)
 {
-    if(!head) return false;
+    if (!pcb){
+        return false;
+    }
+    if (!head)
+        return false;
     if (!head->is_free)
         return false;
-    if (head->memsize < reqsize)
+    if (head->memsize < pcb->memsize)
         return false;
-    if (head->memsize == reqsize)
+    if (head->memsize == pcb->memsize && !head->left)
     {
         head->pcbID = pcb->id;
         pcb->start_address = head->start;
-        pcb->end_address=head->start+head->memsize-1;
+        pcb->end_address = head->start + head->memsize - 1;
         head->is_free = false;
         return true;
     }
-    if (head->memsize > reqsize && head->left == NULL && head->right == NULL)
+    if (head->memsize >= pcb->memsize)
     {
-        BuddyMemory *left = malloc(sizeof(BuddyMemory *));
-        BuddyMemory *right = malloc(sizeof(BuddyMemory *));
-        head->left = left;
-        head->left->memsize = head->memsize / 2;
-        head->right = right;
-        head->right->memsize = head->memsize / 2;
-    }
-    bool allocated = allocate(head->left, pcb, reqsize, head->start);
-    if (!allocated)
-    {
-        allocated = allocate(head->right, pcb, reqsize, head->start + (head->memsize / 2));
-    }
-    if (head->is_free && head->memsize > reqsize) //why dont we check if allocated??
-    {
-        head->is_free = false;
-        head->pcbID = pcb->id;
-        pcb->start_address = head->start;
-        return true;
+        if (head->memsize / 2 < pcb->memsize && !head->left)
+        {
+            head->pcbID = pcb->id;
+            pcb->start_address = head->start;
+            pcb->end_address = head->start + head->memsize - 1;
+            head->is_free = false;
+            return true;
+        }
+        if (!head->left)
+        {
+            BuddyMemory *left = malloc(sizeof(BuddyMemory));
+            BuddyMemory *right = malloc(sizeof(BuddyMemory));
+            head->left = left;
+            head->left->start = head->start;
+            head->left->memsize = head->memsize / 2;
+            head->left->is_free = true;
+            head->right = right;
+            head->right->memsize = head->memsize / 2;
+            head->right->start = head->start + head->memsize / 2;
+            head->right->is_free = true;
+        }
+        bool leftAllocate = allocate(head->left,pcb);
+        bool rightAllocate = false;
+        if (!leftAllocate){
+            rightAllocate = allocate(head->right,pcb);
+        }
+        return leftAllocate || rightAllocate;
     }
 }
 
@@ -383,15 +397,23 @@ void deallocate(BuddyMemory *head, int pcbStart)
         }
     }
 }
-
-void displayTree(BuddyMemory *head, int depth) {
-    if (!head) {
+void displayTree(BuddyMemory *head, int depth, const char *position)
+{
+    if (!head)
+    {
         return;
     }
 
     // Indent based on depth to visualize tree levels
-    for (int i = 0; i < depth; i++) {
+    for (int i = 0; i < depth; i++)
+    {
         printf("  ");
+    }
+
+    // Display whether the block is "Left" or "Right" or "Root"
+    if (position)
+    {
+        printf("[%s] ", position);
     }
 
     // Print information about the block
@@ -399,7 +421,8 @@ void displayTree(BuddyMemory *head, int depth) {
            head->start, head->memsize, head->is_free ? "Yes" : "No");
 
     // If allocated, display the PCB ID and memory range
-    if (!head->is_free && head->pcbID != -1) {
+    if (!head->is_free && head->pcbID != -1)
+    {
         printf(", Allocated to PCB ID=%d (Start=%d, End=%d)",
                head->pcbID, head->start, head->start + head->memsize - 1);
     }
@@ -407,7 +430,7 @@ void displayTree(BuddyMemory *head, int depth) {
     printf("\n");
 
     // Recursively display left and right children
-    displayTree(head->left, depth + 1);
-    displayTree(head->right, depth + 1);
+    displayTree(head->left, depth + 1, "Left");
+    displayTree(head->right, depth + 1, "Right");
 }
 
