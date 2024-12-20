@@ -111,28 +111,37 @@ void RR(int q)
         enqueue(readyq, receivedPCB);
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
-    bool first_time = 1;
-    // int mq_open = 1;
+    //bool first_time = 1;
+     //int mq_open = 1;
     //  main loop
     while (!isEmpty(readyq) || current_process != NULL || mq_open)
     {
-        if (first_time)
-        {
-            first_time = false;
-        }
-        else
-        {
-            int currenttime = getClk();
-            while (currenttime == getClk())
-                ; // kol second do the following
-        }
+         int currenttime = getClk();
+       
         // usleep(200000);
-        // recieve from msgq
+        // if (first_time)
+        // {
+        //     first_time = false;
+        // }
+        // else
+        // {
+        //     int currenttime = getClk();
+            
+        // }
+       
+        
         while (mq_open)
         {
             int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 0, IPC_NOWAIT);
-            if (rec_val == -1)
+             if (rec_val != -1)
             {
+                PCB *receivedPCB = malloc(sizeof(PCB));
+                memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
+                enqueue(readyq, receivedPCB);
+                printf("Received process %d in scheduler  at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
+            }
+            else if (rec_val==-1)
+             {
                 if (errno == ENOMSG)
                 {
                     // No message in the queue
@@ -140,29 +149,15 @@ void RR(int q)
                 }
                 // else
                 // {
-                //     mq_open = 0; // the process generator has closed the message queue
+                //     msgq_open = 0; // the process generator has closed the message queue
                 // }
                 break;
-            }
-            // if there is a process sent add it in the ready queue
-            if (rec_val != -1)
-            {
-                PCB *receivedPCB = malloc(sizeof(PCB));
-                memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
-                enqueue(readyq, receivedPCB);
-                printf("Received process %d in scheduler  at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
-            }
+             }
+            
+           
         }
 
-        // //lw kan fi pcb recieved, enqueue in readyq
-        // if (rec_val!=-1)
-        // {
-        //     PCB* receivedpcb= malloc(sizeof(PCB));
-        //     *receivedpcb = receivedPCBbuff.pcb;
-        //     memcpy(receivedpcb, &receivedPCBbuff.pcb, sizeof(PCB));
-        //     enqueue(readyq,receivedpcb);
-        //     printf("received process %d at time %d with runtime %d\n",receivedpcb->id,getClk(),receivedpcb->runtime);
-        // }
+       
         // case1: fi current process that needs preemption
         if (current_process != NULL && currentquantum >= q)
         {
@@ -236,6 +231,11 @@ void RR(int q)
 
             currentquantum++;
         }
+         while (currenttime == getClk())// kol second do the following
+         {
+            usleep(500);
+         }
+         
     }
     fclose(pFile);
     float cpu_utilization = (runtime_sum / (getClk() - 1)) * 100;
