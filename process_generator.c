@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
         //printf("Received process %d with runtime %d and priority %d \n",readingPcb->id,readingPcb->runtime,readingPcb->priority);
         enqueue(PCBs,readingPcb);
     }
-    
+    fclose(pFile);
     //  2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
     /*  1. Shortest Job First (SJF)
         2. Preemptive Highest Priority First (HPF)
@@ -129,6 +129,7 @@ int main(int argc, char *argv[])
         }
         free(currentPcb);
     }
+    sleep(1); //give time for scheduler to take the last arriving processes (1 sec won't affect the ending of the algo bec the last sent process must at least for min 1 sec, we can use signal instead but increases the overhead)
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
     int stat;
     wait(&stat);

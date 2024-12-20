@@ -28,6 +28,10 @@ typedef struct PCB {
    int remaining_time;
    int waiting_time;
    int pid; //forking id
+   int stopped_time;
+   int restarted_time;
+   int start_time;
+   int finish_time;
 } PCB;
 
 enum STATE{
@@ -38,6 +42,7 @@ enum STATE{
     RESUMED, //4
     STOPPED //5
 };
+const char *stateStrings[] = {"READY", "RUNNING", "FINISHED", "STARTED","RESUMED","STOPPED"};
 
 typedef struct msgbuff
 {
