@@ -30,6 +30,12 @@ int main(int argc, char *argv[])
     // attach handler of finished process generator
     signal(SIGUSR2, generatorTerminate);
     memory = malloc(sizeof(BuddyMemory));
+    memory->memsize = 1024;
+    memory->start = 0;
+    memory->is_free = true;
+    memory->pcbID = -1;
+    memory->left = memory->right = NULL;
+
     // printf("algo: %s, quan: %s \n", argv[1], argv[2]);
     // set up message queue between process generator and scheduler
     // key_t msg_id;
@@ -301,7 +307,7 @@ void MLFQ(int q)
         PCB *receivedPCB = malloc(sizeof(PCB));
         memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
         // printf("now enqueing process %d at %d\n",receivedPCB->id,getClk());
-        allocate(memory, receivedPCB, receivedPCB->memsize, memory->start);
+        allocate(memory, receivedPCB);
         enqueue(queuearray[receivedPCB->priority], receivedPCB);
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
@@ -344,7 +350,7 @@ void MLFQ(int q)
         if (!isEmpty(waitingqueue))
         {
             peak(waitingqueue, &waiting_process);
-            if (allocate(memory, waiting_process, waiting_process->memsize, memory->start))
+            if (allocate(memory, waiting_process))
             {
                 dequeue(waitingqueue, &waiting_process);
                 enqueue(queuearray[waiting_process->priority], waiting_process);
