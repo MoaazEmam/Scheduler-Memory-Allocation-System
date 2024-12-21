@@ -750,7 +750,7 @@ void HPF()
 void ProcessFinishedSJF(int signum)
 {
     printf("Process %d finished at time %d \n", current_process->id, getClk());
-    //deallocate(memory, current_process->start_address);
+    deallocate(memory, current_process->start_address);
     WaitingFlag = 1; // endicate that we can now dequeue from the waiting queue
     // increase the available space
     availableMemory += current_process->end_address - current_process->start_address + 1;
