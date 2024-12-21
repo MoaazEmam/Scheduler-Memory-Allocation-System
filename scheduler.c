@@ -9,6 +9,8 @@ void ProcessFinishedRR(int signum);
 void generatorTerminate(int signum);
 BuddyMemory *memory;
 PCB *current_process = NULL;
+int WaitingFlag;
+int availableMemory = 1024;
 FILE *pFile;
 FILE *mFile;
 float WTA_sum = 0;
@@ -259,12 +261,10 @@ void MLFQ(int q)
 {
     signal(SIGUSR1, ProcessFinishedSJF);
     bool readyqEmpty = false;
-    PCB *waiting_process = NULL;
+    PriorityQueue *WaitingQueue = createQueue();
     CircularQueue *queuearray[11]; // array holding queues for each priority level
-    CircularQueue *waitingqueue = malloc(sizeof(CircularQueue));
-    initQueue(waitingqueue);
     memory->memsize = 1024;
-    memory->start=0;
+    memory->start = 0;
     int current_level = 0;
     pFile = fopen("scheduler.log", "w");
     mFile = fopen("memory.log", "w");
@@ -307,14 +307,13 @@ void MLFQ(int q)
         PCB *receivedPCB = malloc(sizeof(PCB));
         memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
         // printf("now enqueing process %d at %d\n",receivedPCB->id,getClk());
-        allocate(memory, receivedPCB);
         enqueue(queuearray[receivedPCB->priority], receivedPCB);
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
     // int msgq_open = 1;
     PCB *new_process = malloc(sizeof(PCB));
     int currentprocessID;
-    while (!isEmpty(waitingqueue) || !arrIsEmpty(queuearray, 11) || mq_open == 1 || current_process != NULL)
+    while (!isPriEmpty(WaitingQueue) || !arrIsEmpty(queuearray, 11) || mq_open == 1 || current_process != NULL)
     {
         // printf("In big while\n");
         while (mq_open)
@@ -342,19 +341,28 @@ void MLFQ(int q)
                 PCB *receivedPCB = malloc(sizeof(PCB));
                 memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
                 // printf("now enqueing process %d at %d\n",receivedPCB->id,getClk());
-                // enqueue(queuearray[receivedPCB->priority], receivedPCB);
-                enqueue(waitingqueue, receivedPCB);
+                enqueue(queuearray[receivedPCB->priority], receivedPCB);
+                // enqueue(waitingqueue, receivedPCB);
                 printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
             }
         }
-        if (!isEmpty(waitingqueue))
+        // if a processes was deallocted check the waiting queue for any process that can now be allocated
+        if (WaitingFlag)
         {
-            peak(waitingqueue, &waiting_process);
-            if (allocate(memory, waiting_process))
+            while (!isPriEmpty(WaitingQueue))
             {
-                dequeue(waitingqueue, &waiting_process);
-                enqueue(queuearray[waiting_process->priority], waiting_process);
+                PCB *waitingprocess;
+                dequeuePri(WaitingQueue, &waitingprocess);
+                if (waitingprocess->memsize <= availableMemory)
+                {
+                    enqueue(queuearray[waitingprocess->priority], waitingprocess);
+                }
+                else
+                {
+                    break;
+                }
             }
+            WaitingFlag = 0;
         }
         if (current_process == NULL && !arrIsEmpty(queuearray, 11))
         {
@@ -391,31 +399,42 @@ void MLFQ(int q)
                     }
                     else if (current_process->state == READY)
                     {
-                        runtime_sum += current_process->runtime;
-                        current_process->waiting_time = getClk() - current_process->arrival_time;
-                        waiting_sum += current_process->waiting_time;
-                        current_process->state = RUNNING;
-                        current_process->start_time = getClk();
-                        current_process->restarted_time = getClk();
-                        // totalruntime=0;
-                        current_process->remaining_time = current_process->runtime;
-                        fprintf(mFile, "At time %d allocated %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
-                        fflush(mFile);
-                        fprintf(pFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
-                        fflush(pFile);
-                        currentprocessID = fork();
-                        if (currentprocessID == 0)
+                        // check if it can be allocated
+                        if (allocate(memory, current_process))
                         {
-                            // run it and send the process the scheduler's id
-                            char id[20];
-                            sprintf(id, "%d", getppid());
-                            char runtime[20];
-                            sprintf(runtime, "%d", current_process->runtime);
-                            execl("./process.out", "process.out", runtime, id, NULL);
-                            printf("error in excel of process\n");
+                            // decrease the available space
+                            availableMemory -= current_process->end_address - current_process->start_address + 1;
+                            runtime_sum += current_process->runtime;
+                            current_process->waiting_time = getClk() - current_process->arrival_time;
+                            waiting_sum += current_process->waiting_time;
+                            current_process->state = RUNNING;
+                            current_process->start_time = getClk();
+                            current_process->restarted_time = getClk();
+                            // totalruntime=0;
+                            current_process->remaining_time = current_process->runtime;
+                            fprintf(mFile, "At time %d allocated %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                            fflush(mFile);
+                            fprintf(pFile, "At time %d process %d started arr %d total %d remain %d wait %d\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                            fflush(pFile);
+                            currentprocessID = fork();
+                            if (currentprocessID == 0)
+                            {
+                                // run it and send the process the scheduler's id
+                                char id[20];
+                                sprintf(id, "%d", getppid());
+                                char runtime[20];
+                                sprintf(runtime, "%d", current_process->runtime);
+                                execl("./process.out", "process.out", runtime, id, NULL);
+                                printf("error in excel of process\n");
+                            }
+                            printf("Process with id %d running\n", current_process->id);
+                            current_process->pid = currentprocessID;
                         }
-                        printf("Process with id %d running\n", current_process->id);
-                        current_process->pid = currentprocessID;
+                        else
+                        {
+                            // if it can't be allocated add it in the waiting queue
+                            enqueuePri(WaitingQueue, current_process, current_process->memsize);
+                        }
                     }
                 }
             }
@@ -731,7 +750,10 @@ void HPF()
 void ProcessFinishedSJF(int signum)
 {
     printf("Process %d finished at time %d \n", current_process->id, getClk());
-    deallocate(memory, current_process->start_address);
+    //deallocate(memory, current_process->start_address);
+    WaitingFlag = 1; // endicate that we can now dequeue from the waiting queue
+    // increase the available space
+    availableMemory += current_process->end_address - current_process->start_address + 1;
     // if the process sends SIGUSR1 then the current process finished
     current_process->state = FINISHED;
     current_process->remaining_time = 0;
