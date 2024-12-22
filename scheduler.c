@@ -622,8 +622,10 @@ void SJF()
 void HPF()
 {
     PriorityQueue *ReadyQueue = createQueue(); // Priority queue for processes
+    PriorityQueue *WaitingQueue = createQueue();
     PCB *current_process = NULL;
     FILE *logfile = fopen("scheduler.log", "w");
+    FILE *mFile = fopen("memory.log", "w");
     struct msgbuff receivedPCBbuff;
     int msgq_id;
     int totalWaitTime = 0, totalTurnaroundTime = 0, totalProcesses = 0, rec_val;
@@ -636,13 +638,16 @@ void HPF()
         perror("Error while creating the message queue for HPF");
         exit(-1);
     }
+    memory->memsize = 1024;
+    memory->start = 0;
+    int availableMemory = memory->memsize;
 
     // Initialize the clock and get the starting time
-    // initClk();
     int clockTime = getClk();
 
     // Create the message queue
     // while (getClk() != 1);
+    fprintf(mFile, "#At time x allocated y bytes for process z from i to j \n");
     fprintf(logfile, "#At time x process y state arr w total z remain y wait k\n");
 
     while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
@@ -677,6 +682,20 @@ void HPF()
             memcpy(receivedPCB, &receivedPCBbuff.pcb, sizeof(PCB));
             enqueuePri(ReadyQueue, receivedPCB, receivedPCB->priority);
             receivedPCB->remaining_time = receivedPCB->runtime;
+            while (!isPriEmpty(WaitingQueue))
+            {
+                PCB *waitingprocess;
+                dequeuePri(WaitingQueue, &waitingprocess);
+
+                if (waitingprocess->memsize <= availableMemory)
+                {
+                    enqueuePri(ReadyQueue, receivedPCB, receivedPCB->priority);
+                }
+                else
+                {
+                    enqueuePri(WaitingQueue, receivedPCB, receivedPCB->memsize);
+                }
+            }
             printf("Received process with id %d at time %d with runtime %d and priority %d\n",
                    receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
         }
@@ -684,17 +703,21 @@ void HPF()
         // Handle the currently running process
         if (current_process)
         {
-            if ((current_process->remaining_time - 1) == 0)
+            if ((current_process->remaining_time) == 1)
             {
                 // Process finished
-                fprintf(logfile, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->waiting_time, clockTime - current_process->arrival_time, (float)(clockTime - current_process->arrival_time) / current_process->runtime);
+                availableMemory += current_process->end_address - current_process->start_address + 1;
+                fprintf(mFile, "At time %d freed %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                fprintf(logfile, "At time %d process %d finished arr %d total %d remain 0 wait %d TA %d WTA %.2f\n",
+                        getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
+                        current_process->waiting_time, clockTime - current_process->arrival_time,
+                        (float)(clockTime - current_process->arrival_time) / current_process->runtime);
 
                 totalWaitTime += current_process->waiting_time;
                 totalTurnaroundTime += getClk() - current_process->arrival_time;
-                WTA = (float)(getClk() - current_process->arrival_time) / current_process->runtime;
-                WTA_sum += WTA;
+                WTA_sum += (float)(getClk() - current_process->arrival_time) / current_process->runtime;
                 totalProcesses++;
-                current_process->state = FINISHED;
+
                 free(current_process);
                 current_process = NULL;
             }
@@ -726,23 +749,34 @@ void HPF()
 
             if (current_process->state == READY)
             {
-                // Start a new process
-                current_process->remaining_time = current_process->runtime;
-                current_process->remainingTimeAfterStop = current_process->runtime;
-                runtime_sum += current_process->runtime;
-                current_process->restarted_time = getClk();
-                current_process->pid = fork();
-                if (current_process->pid == 0)
+                if (allocate(memory, current_process))
                 {
-                    while (1)
-                        pause(); // Waiting for SIGCONT
-                }
-                // Update wait time
-                current_process->waiting_time += (getClk() - current_process->arrival_time);
+                    // Start a new process
 
-                fprintf(logfile, "At time %d process %d started arr %d total %d remain %d wait %d\n",
-                        getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
-                        current_process->remaining_time, current_process->waiting_time);
+                    current_process->remaining_time = current_process->runtime;
+                    current_process->remainingTimeAfterStop = current_process->runtime;
+                    runtime_sum += current_process->runtime;
+                    current_process->restarted_time = getClk();
+                    fprintf(mFile, "At time %d allocated %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                    fflush(mFile);
+                    current_process->pid = fork();
+
+                    if (current_process->pid == 0)
+                    {
+                        while (1)
+                            pause(); // Waiting for SIGCONT
+                    }
+                    // Update wait time
+                    current_process->waiting_time += (getClk() - current_process->arrival_time);
+
+                    fprintf(logfile, "At time %d process %d started arr %d total %d remain %d wait %d\n",
+                            getClk(), current_process->id, current_process->arrival_time, current_process->runtime,
+                            current_process->remaining_time, current_process->waiting_time);
+                }
+                else
+                {
+                    enqueuePri(WaitingQueue, current_process, current_process->memsize);
+                }
             }
             else if (current_process->state == STOPPED)
             {
@@ -775,11 +809,12 @@ void HPF()
     fprintf(perf, "Avg Waiting = %.2f \n", avgWaiting);
     fclose(perf);
     fclose(logfile);
+    fclose(mFile);
 
     freePriQueue(ReadyQueue);
-    destroyClk(true); // Release shared clock resources
+    freePriQueue(WaitingQueue);
+    destroyClk(true);
 }
-
 void ProcessFinishedSJF(int signum)
 {
     printf("Process %d finished at time %d \n", current_process->id, getClk());
