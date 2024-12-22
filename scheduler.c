@@ -263,8 +263,6 @@ void MLFQ(int q)
     bool readyqEmpty = false;
     PriorityQueue *WaitingQueue = createQueue();
     CircularQueue *queuearray[11]; // array holding queues for each priority level
-    memory->memsize = 1024;
-    memory->start = 0;
     int current_level = 0;
     pFile = fopen("scheduler.log", "w");
     mFile = fopen("memory.log", "w");
@@ -486,9 +484,13 @@ void SJF()
 {
     // attach handler of finished processes
     signal(SIGUSR1, ProcessFinishedSJF);
+    PriorityQueue *WaitingQueue = createQueue();
     // open output.log file
     pFile = fopen("scheduler.log", "w");
+    mFile = fopen("memory.log", "w");
     fprintf(pFile, "#At time x process y state arr w total z remain y wait k \n");
+    fprintf(mFile, "#At time x allocated y bytes for process z from i to j \n");
+    fflush(mFile);
     float waiting_sum = 0; // sum of waiting time
     float noProcess = 0;   // number of processes
     float runtime_sum = 0; // sum of runtime
@@ -519,9 +521,8 @@ void SJF()
     }
     // int mq_open = 1;
     //  loop while there is still processes unfinished or the process generator didn't close the message queue
-    while (!isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
+    while (!isPriEmpty(WaitingQueue) || !isPriEmpty(ReadyQueue) || mq_open || current_process != NULL)
     {
-        // sleep(0.2);
         while (mq_open)
         {
             int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 1, IPC_NOWAIT);
@@ -547,34 +548,66 @@ void SJF()
                 // printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
             }
         }
+        // if a processes was deallocted check the waiting queue for any process that can now be allocated
+        if (WaitingFlag)
+        {
+            while (!isPriEmpty(WaitingQueue))
+            {
+                PCB *waitingprocess;
+                dequeuePri(WaitingQueue, &waitingprocess);
+                if (waitingprocess->memsize <= availableMemory)
+                {
+                    enqueuePri(ReadyQueue, waitingprocess, waitingprocess->runtime);
+                }
+                else
+                {
+                    break;
+                }
+            }
+            WaitingFlag = 0;
+        }
         // if there is no process running and there is a ready process
         if (current_process == NULL && !isPriEmpty(ReadyQueue))
         {
             dequeuePri(ReadyQueue, &current_process);
-            // set its status to running
-            current_process->state = RUNNING;
-            // fork the process and run it
-            int current_processID = fork();
-            if (current_processID == 0)
+            // check if it can be allocated
+            if (allocate(memory, current_process))
             {
-                // run it and send the process the scheduler's id
-                char id[20];
-                sprintf(id, "%d", getppid());
-                char runtime[20];
-                sprintf(runtime, "%d", current_process->runtime);
-                execl("./process.out", "process.out", runtime, id, NULL);
-                // printf("error in excel of process\n");
+                // decrease the available space
+                availableMemory -= current_process->end_address - current_process->start_address + 1;
+                // set its status to running
+                current_process->state = RUNNING;
+                // fork the process and run it
+                int current_processID = fork();
+                if (current_processID == 0)
+                {
+                    // run it and send the process the scheduler's id
+                    char id[20];
+                    sprintf(id, "%d", getppid());
+                    char runtime[20];
+                    sprintf(runtime, "%d", current_process->runtime);
+                    execl("./process.out", "process.out", runtime, id, NULL);
+                    // printf("error in excel of process\n");
+                }
+                current_process->waiting_time = getClk() - current_process->arrival_time;
+                waiting_sum += current_process->waiting_time;
+                runtime_sum += current_process->runtime;
+                noProcess++;
+                current_process->start_time = getClk();
+                fprintf(mFile, "At time %d allocated %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                fflush(mFile);
+                fprintf(pFile, "At time %d process %d started arr %d total %d remain %d wait %d \n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                current_process->pid = current_processID;
             }
-            current_process->waiting_time = getClk() - current_process->arrival_time;
-            waiting_sum += current_process->waiting_time;
-            runtime_sum += current_process->runtime;
-            noProcess++;
-            current_process->start_time = getClk();
-            fprintf(pFile, "At time %d process %d started arr %d total %d remain %d wait %d \n", getClk(), current_process->id, current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
-            current_process->pid = current_processID;
+            else
+            {
+                // if it can't be allocated add it in the waiting queue
+                enqueuePri(WaitingQueue, current_process, current_process->memsize);
+            }
         }
     }
     fclose(pFile);
+    fclose(mFile);
     float cpu_utilization = (runtime_sum / (getClk())) * 100;
     float avgWTA = WTA_sum / noProcess;
     float avgWaiting = waiting_sum / noProcess;
