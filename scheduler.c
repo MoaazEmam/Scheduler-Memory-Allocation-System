@@ -86,8 +86,12 @@ int main(int argc, char *argv[])
 void RR(int q)
 {
     signal(SIGUSR1, ProcessFinishedRR);
+    PriorityQueue *WaitingQueue = createQueue();
     // open log file
     pFile = fopen("scheduler.log", "w");
+    mFile = fopen("memory.log", "w");
+    fprintf(mFile, "#At time x allocated y bytes for process z from i to j \n");
+    fflush(mFile);
     fprintf(pFile, "#At time x process y state arr w total z remain y wait k \n");
     fflush(pFile);
     float waiting_sum = 0; // sum of waiting time
@@ -119,24 +123,14 @@ void RR(int q)
         enqueue(readyq, receivedPCB);
         printf("Received process in scheduler %d at time %d with runtime %d and priority %d \n", receivedPCB->id, getClk(), receivedPCB->runtime, receivedPCB->priority);
     }
-    bool first_time = 1;
+
     // int mq_open = 1;
     //  main loop
     while (!isEmpty(readyq) || current_process != NULL || mq_open)
     {
-        if (first_time)
-        {
-            first_time = false;
-        }
-        else
-        {
-            int currenttime = getClk();
-            while (currenttime == getClk())
-                ; // kol second do the following
-        }
-        // usleep(200000);
-        // recieve from msgq
-        while (mq_open)
+        int currenttime = getClk();
+
+        while (1)
         {
             int rec_val = msgrcv(msgq_id, &receivedPCBbuff, sizeof(receivedPCBbuff.pcb), 0, IPC_NOWAIT);
             if (rec_val == -1)
@@ -146,10 +140,6 @@ void RR(int q)
                     // No message in the queue
                     errno = 0;
                 }
-                // else
-                // {
-                //     mq_open = 0; // the process generator has closed the message queue
-                // }
                 break;
             }
             // if there is a process sent add it in the ready queue
@@ -162,59 +152,86 @@ void RR(int q)
             }
         }
 
-        // //lw kan fi pcb recieved, enqueue in readyq
-        // if (rec_val!=-1)
-        // {
-        //     PCB* receivedpcb= malloc(sizeof(PCB));
-        //     *receivedpcb = receivedPCBbuff.pcb;
-        //     memcpy(receivedpcb, &receivedPCBbuff.pcb, sizeof(PCB));
-        //     enqueue(readyq,receivedpcb);
-        //     printf("received process %d at time %d with runtime %d\n",receivedpcb->id,getClk(),receivedpcb->runtime);
-        // }
-        // case1: fi current process that needs preemption
-        if (current_process != NULL && currentquantum >= q)
+        if (current_process != NULL) // fi current process bas msh ha preempt it
         {
-            kill(current_process->pid, SIGSTOP);
-            current_process->state = STOPPED;
-            current_process->stopped_time = getClk();
-            enqueue(readyq, current_process);
-            fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d\n", getClk(), current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
-            fflush(pFile);
-            current_process = NULL;
+            currentquantum++;
+            current_process->remaining_time--;
+            if (current_process->remaining_time == 0)
+            {
+                deallocate(memory, current_process->start_address);
+                availableMemory += current_process->end_address - current_process->start_address + 1;
+                current_process->state = FINISHED;
+                current_process->finished_time = getClk();
+                // increase the available space
+
+                float TA = current_process->finished_time - current_process->arrival_time;
+                float WTA = TA / current_process->runtime;
+                WTA_sum += WTA;
+                fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d TA %.2f WTA %.2f\n", getClk(), current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time, TA, WTA);
+                fflush(pFile);
+                printf("finished print %d - %d - %d\n", isEmpty(readyq), current_process->id, mq_open);
+                fprintf(mFile, "At time %d freed %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                free(current_process);
+                current_process = NULL;
+                // printf("empty? %d, opened? %d\n", isEmpty(readyq), mq_open);
+            }
+            if (current_process != NULL && currentquantum >= q)
+            {
+                kill(current_process->pid, SIGSTOP);
+                current_process->state = STOPPED;
+                current_process->stopped_time = getClk();
+                enqueue(readyq, current_process);
+                fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d\n", getClk(), current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                fflush(pFile);
+                current_process = NULL;
+            }
         }
+
         if (current_process == NULL && !isEmpty(readyq)) // case2: mafish haga currently running
         {
             dequeue(readyq, &current_process);
 
             if (current_process->pid == -1) // never forked before->fork
             {
-                current_process->state = STARTED;
-                current_process->start_time = getClk();
-                noProcess++;
-                current_process->waiting_time = getClk() - current_process->arrival_time;
-                runtime_sum += current_process->runtime;
-                waiting_sum += current_process->waiting_time;
-                fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d\n", getClk(), current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
-                fflush(pFile);
-                int currentprocesspid = fork();
-                if (currentprocesspid == 0)
+                // if i can allocate it:
+                if (allocate(memory, current_process))
                 {
-                    char sch_id[20];
-                    sprintf(sch_id, "%d", getppid());
-                    char runtime[20];
-                    sprintf(runtime, "%d", current_process->runtime);
-                    execl("./process.out", "process.out", runtime, sch_id, NULL);
+                    availableMemory -= current_process->end_address - current_process->start_address + 1; // decrement available memory
+                    fprintf(mFile, "At time %d allocated %d bytes for process %d from %d to %d \n", getClk(), current_process->memsize, current_process->id, current_process->start_address, current_process->end_address);
+                    fflush(mFile);
+                    current_process->state = STARTED;
+                    current_process->start_time = getClk();
+                    noProcess++;
+                    current_process->waiting_time = getClk() - current_process->arrival_time;
+                    runtime_sum += current_process->runtime;
+                    waiting_sum += current_process->waiting_time;
+                    fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d\n", getClk(), current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time);
+                    fflush(pFile);
+                    int currentprocesspid = fork();
+                    if (currentprocesspid == 0)
+                    {
+                        char sch_id[20];
+                        sprintf(sch_id, "%d", getppid());
+                        char runtime[20];
+                        sprintf(runtime, "%d", current_process->runtime);
+                        execl("./process.out", "process.out", runtime, sch_id, NULL);
+                    }
+                    else
+                    {
+                        current_process->pid = currentprocesspid;
+                    }
                 }
                 else
                 {
-                    current_process->pid = currentprocesspid;
+                    // if it can't be allocated add it in the waiting queue
+                    enqueuePri(WaitingQueue, current_process, current_process->memsize);
                 }
             }
             else // has been previously forked
             {
                 current_process->state = RESUMED;
                 current_process->restarted_time = getClk();
-                waiting_sum -= current_process->waiting_time;
+                waiting_sum-=current_process->waiting_time;
                 current_process->waiting_time += current_process->restarted_time - current_process->stopped_time;
                 waiting_sum += current_process->waiting_time;
 
@@ -224,28 +241,16 @@ void RR(int q)
             }
             currentquantum = 0; // reset quantum
         }
-        if (current_process != NULL) // case3: fi current process bas msh ha preempt it
-        {
-            current_process->remaining_time--;
-            if (current_process->remaining_time == 0)
-            {
-                current_process->state = FINISHED;
-                current_process->finished_time = getClk();
-                float TA = current_process->finished_time - current_process->arrival_time;
-                float WTA = TA / current_process->runtime;
-                WTA_sum += WTA;
-                fprintf(pFile, "At time %d process %d %s arr %d total %d remain %d wait %d TA %.2f WTA %.2f\n", getClk() + 1, current_process->id, stateStrings[current_process->state], current_process->arrival_time, current_process->runtime, current_process->remaining_time, current_process->waiting_time, TA, WTA);
-                fflush(pFile);
-                printf("finished print %d - %d - %d\n", isEmpty(readyq), current_process->id, mq_open);
-                // free(current_process);
-                current_process = NULL;
-                // printf("empty? %d, opened? %d\n", isEmpty(readyq), mq_open);
-            }
 
-            currentquantum++;
+        while (getClk() < currenttime)
+            ;
+        while (currenttime == getClk())
+        {
+            usleep(500);
         }
     }
     fclose(pFile);
+    fclose(mFile);
     float cpu_utilization = (runtime_sum / (getClk() - 1)) * 100;
     float avgWTA = WTA_sum / noProcess;
     float avgWaiting = waiting_sum / noProcess;
