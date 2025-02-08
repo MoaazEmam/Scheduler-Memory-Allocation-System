@@ -1,17 +1,19 @@
-## headers.h contains clk functions, it should be included anywhere the clock functions are used.
+# This project is a simulation for an operating system's
+# scheduler and memory allocation.
+# The scheduler contains 4 different algorithms:
+# 1.Shortest Job First
+# 2.Preemtive Highest Priority First
+# 3.Round Robin
+# 4.Preemptive multilevel feedback queue
 
-## To get time call:
+# The memory allocation was implemented using buddy system 
+# and is respresented as a tree.
 
-getClk();
+# This project was a part of an Operating System course 
+# in the Cairo University, Faculty of Engineering
 
-## You can use Makefile to build and run your project
-
-# To compile your project, use the command:
-make
-
-# To run your project, use the command:
-make run
-
-# If you added a file to your project add it to the build section in the Makefile
-
-# Always start the line with a tab in Makefile, it is its syntax
+# Credits: 
+# Moaaz Emam 
+# Yara Aly 
+# Ruaa Amr 
+# Mohamed Tarek
