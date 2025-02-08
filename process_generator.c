@@ -20,19 +20,20 @@ int main(int argc, char *argv[])
         printf("no such file.");
         return 1;
     }
-    int id,arrival,runtime,priority;
+    int id,arrival,runtime,priority,memsize;
     fscanf(pFile, "%*[^\n]\n");
-    while (fscanf(pFile, "%d %d %d %d", &id, &arrival, &runtime, &priority) == 4) {
+    while (fscanf(pFile, "%d %d %d %d %d", &id, &arrival, &runtime, &priority,&memsize) == 5) {
         PCB* readingPcb;
         readingPcb = malloc(sizeof(PCB));
         readingPcb->id = id;
         readingPcb->arrival_time = arrival;
         readingPcb->runtime = runtime;
         readingPcb->priority = priority;
+        readingPcb->memsize=memsize;
         //printf("Received process %d with runtime %d and priority %d \n",readingPcb->id,readingPcb->runtime,readingPcb->priority);
         enqueue(PCBs,readingPcb);
     }
-    
+    fclose(pFile);
     //  2. Read the chosen scheduling algorithm and its parameters, if there are any from the argument list.
     /*  1. Shortest Job First (SJF)
         2. Preemptive Highest Priority First (HPF)
@@ -120,8 +121,9 @@ int main(int argc, char *argv[])
         arrivedprocess.pcb.remaining_time = currentPcb->runtime;
         arrivedprocess.pcb.waiting_time = 0;
         arrivedprocess.pcb.state = READY; //momken ne3melha enum....3mlnaha f3lan b enum :)
+        arrivedprocess.pcb.memsize=currentPcb->memsize;
         while (getClk() < currentPcb->arrival_time); //wait till a process arrives
-        printf("Sent process %d with arrival time %d and runtime %d and priority %d \n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority);
+        printf("Sent process %d with arrival time %d and runtime %d and priority %d memsize %d\n",arrivedprocess.pcb.id,arrivedprocess.pcb.arrival_time,arrivedprocess.pcb.runtime,arrivedprocess.pcb.priority,arrivedprocess.pcb.memsize);
         arrivedprocess.mtype = 1;
         send_val = msgsnd(msgq_id, &arrivedprocess, sizeof(arrivedprocess.pcb), !IPC_NOWAIT); //send process to schedular
         if (send_val == -1){
@@ -129,9 +131,15 @@ int main(int argc, char *argv[])
         }
         free(currentPcb);
     }
+    //sleep(1); //give time for scheduler to take the last arriving processes (1 sec won't affect the ending of the algo bec the last sent process must at least for min 1 sec, we can use signal instead but increases the overhead)
+    //msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue after sending all processes
+    kill (scheduler_id,SIGUSR2);
+    int stat;
+    wait(&stat);
+
     // 7. Clear clock resources
-    destroyClk(true);
     msgctl(msgq_id, IPC_RMID, (struct msqid_ds *)0); //destroy message queue
+    destroyClk(true);
     return 0;
 }
 
