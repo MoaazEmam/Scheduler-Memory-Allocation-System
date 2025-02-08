@@ -44,7 +44,7 @@ processes.txt: This is the input file containing the processes.
 
 -q: (Optional) Specifies the quantum time for RR and MLFQ.
 
-###  Input File Format
+### 2. Input File Format
 
 The input file `processes.txt` should follow this format:
 
@@ -54,7 +54,18 @@ The input file `processes.txt` should follow this format:
 2 3 3 3 170
 ```
 
-### Running the Project
+#id : the process id
+
+arrival: the arrival time of the process
+
+runtime: the expected runtime of the process
+
+priority: the priority of the process range from 0 to 10 where 0 is the highest priority and 10 is the
+lowest priority.
+
+memsize: the expected memory size occupied by the process
+
+### 3. Running the Project
 
 To run the project, use the following command:
 
@@ -62,11 +73,11 @@ To run the project, use the following command:
 make run
 ```
 
-### Output Files
+## Output Files
 
 The program generates the following output files:
 
-#### `memory.log`
+### `memory.log`
 
 This file contains memory allocation and deallocation events in the following format:
 
@@ -78,7 +89,7 @@ At time 6 freed 170 bytes from process 2 from 256 to 511
 At time 10 freed 200 bytes from process 1 from 0 to 255
 ```
 
-#### `scheduler.log`
+### `scheduler.log`
 
 This file contains the scheduler's events in the following format:
 
@@ -92,7 +103,7 @@ At time 6 process 1 resumed arr 1 total 6 remain 4 wait 3
 At time 10 process 1 finished arr 1 total 6 remain 0 wait 3 TA 9 WTA 1.5
 ```
 
-#### `scheduler.perf`
+### `scheduler.perf`
 
 This file contains performance metrics in the following format:
 
