@@ -1,0 +1,14 @@
+# Build outputs
+*.out
+test_generator
+testtree
+
+# Run outputs
+msgfile
+scheduler.log
+memory.log
+scheduler.perf
+
+# Editor
+.vscode/
+*.code-workspace
