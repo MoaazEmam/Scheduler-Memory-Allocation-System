@@ -115,7 +115,7 @@ Avg Waiting = 1.5
 
 ## Design
 
-- **Processes:** the process generator `fork`s and `exec`s the clock, the scheduler, and one process per job at its arrival time.
+- **Processes:** the process generator `fork`s and `exec`s the clock and the scheduler. The scheduler then `fork`s and `exec`s one process per job when that job is first scheduled.
 - **IPC:** arrivals reach the scheduler over a System V message queue, and the clock is shared through shared memory. The scheduler preempts and resumes processes with `SIGSTOP`/`SIGCONT`. A finished process notifies the scheduler with `SIGUSR1`, and the generator signals end-of-input with `SIGUSR2`.
 - **Memory:** a buddy allocator is represented as a binary tree over 1024 bytes. Each request gets the smallest power-of-two block that fits. Blocks split recursively on allocation, and two free buddies merge back into their parent on release.
 
