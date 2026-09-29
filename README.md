@@ -113,6 +113,68 @@ Avg WTA = 1.25
 Avg Waiting = 1.5
 ```
 
+## Design
+
+- **Processes:** the process generator `fork`s and `exec`s the clock and the scheduler. The scheduler then `fork`s and `exec`s one process per job when that job is first scheduled.
+- **IPC:** arrivals reach the scheduler over a System V message queue, and the clock is shared through shared memory. The scheduler preempts and resumes processes with `SIGSTOP`/`SIGCONT`. A finished process notifies the scheduler with `SIGUSR1`, and the generator signals end-of-input with `SIGUSR2`.
+- **Memory:** a buddy allocator is represented as a binary tree over 1024 bytes. Each request gets the smallest power-of-two block that fits. Blocks split recursively on allocation, and two free buddies merge back into their parent on release.
+
+## Sample run
+
+Round Robin with quantum 5 (`-sch 3 -q 5`) on this input (`processes.txt`):
+
+```
+#id arrival runtime priority memsize
+1   4   11  9  32
+2	7	2	8  220
+3	8	28	0 3
+4	13	7	6 39
+5	22	7	8   372
+```
+
+`scheduler.log` (first 12 of 28 events):
+
+```
+#At time x process y state arr w total z remain y wait k 
+At time 4 process 1 STARTED arr 4 total 11 remain 11 wait 0
+At time 9 process 1 STOPPED arr 4 total 11 remain 6 wait 0
+At time 9 process 2 STARTED arr 7 total 2 remain 2 wait 2
+At time 11 process 2 FINISHED arr 7 total 2 remain 0 wait 2 TA 4.00 WTA 2.00
+At time 11 process 3 STARTED arr 8 total 28 remain 28 wait 3
+At time 16 process 3 STOPPED arr 8 total 28 remain 23 wait 3
+At time 16 process 1 RESUMED arr 4 total 11 remain 6 wait 7
+At time 21 process 1 STOPPED arr 4 total 11 remain 1 wait 7
+At time 21 process 4 STARTED arr 13 total 7 remain 7 wait 8
+At time 26 process 4 STOPPED arr 13 total 7 remain 2 wait 8
+At time 26 process 3 RESUMED arr 8 total 28 remain 23 wait 13
+At time 31 process 3 STOPPED arr 8 total 28 remain 18 wait 13
+...
+```
+
+`memory.log`:
+
+```
+#At time x allocated y bytes for process z from i to j 
+At time 4 allocated 32 bytes for process 1 from 0 to 31 
+At time 9 allocated 220 bytes for process 2 from 256 to 511 
+At time 11 freed 220 bytes for process 2 from 256 to 511 
+At time 11 allocated 3 bytes for process 3 from 32 to 35 
+At time 21 allocated 39 bytes for process 4 from 64 to 127 
+At time 32 freed 32 bytes for process 1 from 0 to 31 
+At time 32 allocated 372 bytes for process 5 from 512 to 1023 
+At time 39 freed 39 bytes for process 4 from 64 to 127 
+At time 46 freed 372 bytes for process 5 from 512 to 1023 
+At time 59 freed 3 bytes for process 3 from 32 to 35
+```
+
+`scheduler.perf`:
+
+```
+CPU utilization = 93.22 % 
+Avg WTA = 2.70 
+Avg Waiting = 15.60
+```
+
 ## This project was a part of an Operating System course in the Cairo University, Faculty of Engineering
 
 ## Credits: 
